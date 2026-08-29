@@ -91,6 +91,25 @@ class FlightApi {
     throw ApiException(response.statusCode);
   }
 
+  /// Mirrors GET /flight - every entry for the authenticated pilot, already sorted newest-first
+  /// by date then departure time (see FlightEntryRepository.findAllByPilotId). No pagination yet
+  /// (see CLAUDE.md's "Not yet built" note) - returns everything in one response.
+  static Future<List<FlightEntry>> listFlightEntries({
+    required String sessionId,
+    http.Client? client,
+  }) async {
+    final response = await (client ?? http.Client()).get(
+      Uri.parse('$apiBase/flight'),
+      headers: {'Authorization': 'Bearer $sessionId'},
+    );
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return (jsonDecode(response.body) as List)
+          .map((json) => FlightEntry.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+    throw ApiException(response.statusCode);
+  }
+
   static String _dateOnly(DateTime date) =>
       '${date.year.toString().padLeft(4, '0')}-'
       '${date.month.toString().padLeft(2, '0')}-'
