@@ -6,6 +6,7 @@ import '../api/flight_api.dart';
 import '../models/flight_entry.dart';
 import '../models/session.dart';
 import '../widgets/responsive_page.dart';
+import 'view_flight_entry_screen.dart';
 
 /// The CAP804/FCL.050 logbook entry form - see docs/plans/logbook-entries.md (chunk 2) in the
 /// hobbs repo. aircraftId/pilotInCommandId/coPilotId are plain pasted-in ids for now: no
@@ -184,6 +185,17 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
               SelectableText('Entry id: ${_created!.id}'),
               const SizedBox(height: 24),
               FilledButton(
+                onPressed: () =>
+                    Navigator.of(context).pushReplacement(MaterialPageRoute(
+                        builder: (_) => ViewFlightEntryScreen(
+                              session: widget.session,
+                              initialFlightEntryId: _created!.id,
+                              httpClient: widget.httpClient,
+                            ))),
+                child: const Text('View it'),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton(
                 onPressed: () => Navigator.of(context).pop(_created),
                 child: const Text('Done'),
               ),

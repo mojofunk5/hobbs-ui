@@ -4,6 +4,7 @@ import '../models/session.dart';
 import '../session_store.dart';
 import '../widgets/responsive_page.dart';
 import 'create_flight_entry_screen.dart';
+import 'view_flight_entry_screen.dart';
 import 'welcome_screen.dart';
 
 class SignedInScreen extends StatelessWidget {
@@ -42,6 +43,12 @@ class SignedInScreen extends StatelessWidget {
               onPressed: () => Navigator.of(context).push(MaterialPageRoute(
                   builder: (_) => CreateFlightEntryScreen(session: session))),
               child: const Text('Log a flight'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => ViewFlightEntryScreen(session: session))),
+              child: const Text('View a flight'),
             ),
             const SizedBox(height: 12),
             OutlinedButton(
