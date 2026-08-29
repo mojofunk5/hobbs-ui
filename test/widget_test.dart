@@ -4,17 +4,27 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hobbs_ui/main.dart';
 
 void main() {
-  testWidgets('shows a loading state before the health check resolves', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('shows the welcome screen when no session is persisted',
+      (tester) async {
     SharedPreferences.setMockInitialValues({});
 
     await tester.pumpWidget(const HobbsApp());
-    // Exactly one pump: lets StartupScreen's SessionStore.load() resolve and HealthCheckPage
-    // mount (still showing its initial "loading" state) - a second pump would also flush
-    // HealthCheckPage's own health-check future, moving past the state this test checks for.
     await tester.pump();
 
-    expect(find.text('Checking backend...'), findsOneWidget);
+    expect(find.text('Log in'), findsOneWidget);
+    expect(find.text('Register'), findsOneWidget);
+  });
+
+  testWidgets('shows the signed-in screen when a session is already persisted',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'hobbs_session':
+          '{"sessionId":"s","pilotId":"p","name":"Wills","admin":false}',
+    });
+
+    await tester.pumpWidget(const HobbsApp());
+    await tester.pump();
+
+    expect(find.text('Signed in as Wills'), findsOneWidget);
   });
 }
