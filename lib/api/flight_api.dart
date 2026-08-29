@@ -73,6 +73,24 @@ class FlightApi {
     throw ApiException(response.statusCode);
   }
 
+  /// Mirrors GET /flight/{flightEntryId} - 403s if the entry belongs to a different pilot, 404s
+  /// if no such entry exists (see FlightEntryEndpoint.getFlightEntry).
+  static Future<FlightEntry> getFlightEntry({
+    required String sessionId,
+    required String flightEntryId,
+    http.Client? client,
+  }) async {
+    final response = await (client ?? http.Client()).get(
+      Uri.parse('$apiBase/flight/$flightEntryId'),
+      headers: {'Authorization': 'Bearer $sessionId'},
+    );
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return FlightEntry.fromJson(
+          jsonDecode(response.body) as Map<String, dynamic>);
+    }
+    throw ApiException(response.statusCode);
+  }
+
   static String _dateOnly(DateTime date) =>
       '${date.year.toString().padLeft(4, '0')}-'
       '${date.month.toString().padLeft(2, '0')}-'
