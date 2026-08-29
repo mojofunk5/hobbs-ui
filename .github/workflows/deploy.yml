@@ -1,0 +1,69 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - run: flutter pub get
+
+      - run: flutter analyze
+
+      - run: flutter test
+
+      - run: flutter build web --release
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: web-build
+          path: build/web/
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: web-build
+          path: build/web
+
+      # Each deploy lands in its own directory named after the commit SHA, and "current" is a
+      # relative symlink (releases/<sha>, not an absolute host path) swapped to point at it -
+      # relative so it also resolves correctly from inside the Caddy container, which only sees the
+      # mounted directory's own path (/srv/hobbs-ui), not the host's (/opt/hobbs-ui). Rolling back is
+      # just repointing the symlink at an older release directory - no rebuild needed.
+      - name: Deploy to VPS
+        env:
+          DEPLOY_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          mkdir -p "$HOME/.ssh"
+          echo "$DEPLOY_KEY" > "$HOME/.ssh/deploy_key"
+          chmod 600 "$HOME/.ssh/deploy_key"
+          SSH_OPTS=(-i "$HOME/.ssh/deploy_key" -o StrictHostKeyChecking=accept-new)
+          SHA="${GITHUB_SHA::7}"
+          # shellcheck disable=SC2029  # deliberate: $SHA only exists on the runner, expand it locally
+          ssh "${SSH_OPTS[@]}" root@213.171.213.90 "mkdir -p /opt/hobbs-ui/releases/$SHA"
+          scp "${SSH_OPTS[@]}" -r build/web/* "root@213.171.213.90:/opt/hobbs-ui/releases/$SHA/"
+          # shellcheck disable=SC2029  # deliberate: $SHA only exists on the runner, expand it locally
+          ssh "${SSH_OPTS[@]}" root@213.171.213.90 \
+            "cd /opt/hobbs-ui && ln -sfn releases/$SHA current && ls -1dt releases/*/ | tail -n +6 | xargs -r rm -rf"
+          # Caddy's own compose stack lives here too - sync its config and bring it up/reload on
+          # every deploy. Idempotent when neither file changed (no-op recreate + harmless reload), so
+          # this is safe to run even on deploys that only touch static files.
+          scp "${SSH_OPTS[@]}" docker-compose.yml Caddyfile root@213.171.213.90:/opt/hobbs-ui/
+          ssh "${SSH_OPTS[@]}" root@213.171.213.90 \
+            "cd /opt/hobbs-ui && docker compose pull caddy && docker compose up -d caddy && docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile"

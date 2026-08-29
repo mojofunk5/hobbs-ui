@@ -1,0 +1,28 @@
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+      # ./current (a symlink this repo's own deploy pipeline repoints on every release) lives inside
+      # /opt/hobbs-ui, which is exactly where this compose file itself is deployed - mounting the
+      # parent dir (not the symlink's resolved target directly) means Caddy re-resolves it on every
+      # request, so a symlink swap takes effect immediately, no restart needed.
+      - /opt/hobbs-ui:/srv/hobbs-ui:ro
+    networks:
+      # external, shared with the `hobbs` repo's own compose stack (postgres + app) on the same box,
+      # so this container can still reach `app` by service name for the /api/* reverse proxy.
+      - hobbs-net
+
+networks:
+  hobbs-net:
+    external: true
+
+volumes:
+  caddy-data:
