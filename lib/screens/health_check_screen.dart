@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../api/api_base.dart';
+import '../widgets/responsive_page.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
 
@@ -49,9 +50,9 @@ class _HealthCheckPageState extends State<HealthCheckPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Hobbs')),
-      body: Center(
+      body: ResponsivePage(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               switch (_state) {

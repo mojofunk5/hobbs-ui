@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/session.dart';
 import '../session_store.dart';
+import '../widgets/responsive_page.dart';
 import 'health_check_screen.dart';
 
 class SignedInScreen extends StatelessWidget {
@@ -23,9 +24,9 @@ class SignedInScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Hobbs')),
-      body: Center(
+      body: ResponsivePage(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.flight_takeoff, size: 64, color: Colors.indigo),
             const SizedBox(height: 16),

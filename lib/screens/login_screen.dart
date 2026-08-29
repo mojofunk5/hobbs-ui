@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import '../api/api_exception.dart';
 import '../api/auth_api.dart';
 import '../session_store.dart';
+import '../widgets/responsive_page.dart';
 import 'signed_in_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -44,6 +46,10 @@ class _LoginScreenState extends State<LoginScreen> {
         client: widget.httpClient,
       );
       await SessionStore.save(session);
+      // Tells the browser the credentials just entered were genuinely used to complete a
+      // sign-in, which is what prompts Chrome/Safari to offer saving them - without this call
+      // the password manager has no signal that submission actually succeeded.
+      TextInput.finishAutofillContext();
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => SignedInScreen(session: session)),
@@ -67,50 +73,48 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Log in')),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: _identifierController,
-                    decoration: const InputDecoration(labelText: 'Email'),
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Required' : null,
-                  ),
+      body: ResponsivePage(
+        child: Form(
+          key: _formKey,
+          child: AutofillGroup(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _identifierController,
+                  decoration: const InputDecoration(labelText: 'Email'),
+                  keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.username],
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Required' : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _passwordController,
+                  decoration: const InputDecoration(labelText: 'Password'),
+                  obscureText: true,
+                  autofillHints: const [AutofillHints.password],
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? 'Required' : null,
+                ),
+                const SizedBox(height: 24),
+                if (_error != null) ...[
+                  Text(_error!,
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.error)),
                   const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _passwordController,
-                    decoration: const InputDecoration(labelText: 'Password'),
-                    obscureText: true,
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Required' : null,
-                  ),
-                  const SizedBox(height: 24),
-                  if (_error != null) ...[
-                    Text(_error!,
-                        style: TextStyle(
-                            color: Theme.of(context).colorScheme.error)),
-                    const SizedBox(height: 12),
-                  ],
-                  FilledButton(
-                    onPressed: _submitting ? null : _submit,
-                    child: _submitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Log in'),
-                  ),
                 ],
-              ),
+                FilledButton(
+                  onPressed: _submitting ? null : _submit,
+                  child: _submitting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Log in'),
+                ),
+              ],
             ),
           ),
         ),
