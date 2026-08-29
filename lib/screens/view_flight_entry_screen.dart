@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 
 import '../api/api_exception.dart';
 import '../api/flight_api.dart';
+import '../format.dart';
 import '../models/flight_entry.dart';
 import '../models/session.dart';
 import '../widgets/responsive_page.dart';
@@ -90,24 +91,6 @@ class _ViewFlightEntryScreenState extends State<ViewFlightEntryScreen> {
     });
   }
 
-  static String _formatMinutes(int minutes) {
-    final hours = minutes ~/ 60;
-    final remainder = minutes % 60;
-    return '$hours:${remainder.toString().padLeft(2, '0')}';
-  }
-
-  static String _formatDate(DateTime date) =>
-      '${date.year.toString().padLeft(4, '0')}-'
-      '${date.month.toString().padLeft(2, '0')}-'
-      '${date.day.toString().padLeft(2, '0')}';
-
-  /// Deliberately not converted to the viewer's local timezone - departureTime/arrivalTime are
-  /// wall-clock times at the departure/arrival airfield (see FlightEntry's Javadoc), not "when
-  /// this happened in whatever timezone the viewer's device is set to".
-  static String _formatTime(DateTime time) =>
-      '${time.hour.toString().padLeft(2, '0')}:'
-      '${time.minute.toString().padLeft(2, '0')}';
-
   Widget _row(String label, String value) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
@@ -164,29 +147,29 @@ class _ViewFlightEntryScreenState extends State<ViewFlightEntryScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _row('Date', _formatDate(entry.date)),
+                    _row('Date', formatDate(entry.date)),
                     _row('Aircraft', entry.aircraftId),
                     _row('Departure',
-                        '${entry.departurePlace} ${_formatTime(entry.departureTime)}'),
+                        '${entry.departurePlace} ${formatTime(entry.departureTime)}'),
                     _row('Arrival',
-                        '${entry.arrivalPlace} ${_formatTime(entry.arrivalTime)}'),
+                        '${entry.arrivalPlace} ${formatTime(entry.arrivalTime)}'),
                     _row('Pilot in command', entry.pilotInCommandId),
                     if (entry.coPilotId != null)
                       _row('Co-pilot', entry.coPilotId!),
                     const Divider(height: 24),
-                    _row('Total', _formatMinutes(entry.totalMinutes)),
+                    _row('Total', formatMinutes(entry.totalMinutes)),
                     _row('Single-engine',
-                        _formatMinutes(entry.singleEngineMinutes)),
+                        formatMinutes(entry.singleEngineMinutes)),
                     _row('Multi-engine',
-                        _formatMinutes(entry.multiEngineMinutes)),
-                    _row('Night', _formatMinutes(entry.nightMinutes)),
-                    _row('IFR', _formatMinutes(entry.ifrMinutes)),
+                        formatMinutes(entry.multiEngineMinutes)),
+                    _row('Night', formatMinutes(entry.nightMinutes)),
+                    _row('IFR', formatMinutes(entry.ifrMinutes)),
                     _row('Cross-country',
-                        _formatMinutes(entry.crossCountryMinutes)),
-                    _row('PIC', _formatMinutes(entry.pilotInCommandMinutes)),
-                    _row('Co-pilot time', _formatMinutes(entry.coPilotMinutes)),
-                    _row('Dual', _formatMinutes(entry.dualMinutes)),
-                    _row('Instructor', _formatMinutes(entry.instructorMinutes)),
+                        formatMinutes(entry.crossCountryMinutes)),
+                    _row('PIC', formatMinutes(entry.pilotInCommandMinutes)),
+                    _row('Co-pilot time', formatMinutes(entry.coPilotMinutes)),
+                    _row('Dual', formatMinutes(entry.dualMinutes)),
+                    _row('Instructor', formatMinutes(entry.instructorMinutes)),
                     const Divider(height: 24),
                     _row('Day landings', '${entry.dayLandings}'),
                     _row('Night landings', '${entry.nightLandings}'),

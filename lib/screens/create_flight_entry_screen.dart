@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 
 import '../api/api_exception.dart';
 import '../api/flight_api.dart';
+import '../format.dart';
 import '../models/flight_entry.dart';
 import '../models/session.dart';
 import '../widgets/responsive_page.dart';
@@ -163,11 +164,6 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
     }
   }
 
-  String _formatDate(DateTime date) =>
-      '${date.year.toString().padLeft(4, '0')}-'
-      '${date.month.toString().padLeft(2, '0')}-'
-      '${date.day.toString().padLeft(2, '0')}';
-
   @override
   Widget build(BuildContext context) {
     if (_created != null) {
@@ -223,7 +219,7 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
                 const SizedBox(height: 12),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text('Date: ${_formatDate(_date)}'),
+                  title: Text('Date: ${formatDate(_date)}'),
                   trailing: const Icon(Icons.calendar_today),
                   onTap: _pickDate,
                 ),

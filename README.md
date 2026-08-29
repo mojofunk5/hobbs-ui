@@ -10,8 +10,14 @@ logbook. Live at [hobbs.bssd.co.uk](https://hobbs.bssd.co.uk).
 - **Reset password** - request a code by email, then confirm with the 6-digit code and a new
   password. Deep-linkable from the actual emailed reset link
   (`hobbs.bssd.co.uk/reset-password?email=&code=`) straight into a locked, pre-filled confirm step
-- **Signed in** - a bare landing screen confirming auth works end to end; real logbook screens are
-  still to come
+- **Signed in** - landing screen with links into the logbook screens below
+- **Log a flight** - the CAP804/FCL.050 entry form (`POST /flight`). `aircraftId`/
+  `pilotInCommandId`/`coPilotId` are pasted-in ids for now - no search picker yet (see
+  [hobbs's docs/plans/logbook-entries.md](https://github.com/mojofunk5/hobbs/blob/master/docs/plans/logbook-entries.md))
+- **Your flights** - lists every entry for the signed-in pilot (`GET /flight`, no pagination yet),
+  each row opening the view screen below
+- **View a flight** - looks up one entry by id (`GET /flight/{id}`); reachable directly (paste an
+  id) or via "Your flights" / straight after creating one
 
 See `docs/architecture-brief.md` for how this is put together, and its Open Work section for what's
 next.

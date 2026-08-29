@@ -6,9 +6,9 @@ in shape; content is this project's own.
 ## 1. Purpose
 
 A Flutter client for `hobbs`, a self-hosted PPL flight logbook backend. Today: authentication
-(register, login, password reset) and a bare signed-in landing screen. The point of this first phase
-was proving the whole pipeline - Flutter build, Caddy, DNS, backend - works end to end before
-building real logbook screens on top of it.
+(register, login, password reset) plus the create/view/list logbook-entry screens
+(`docs/plans/logbook-entries.md` in `hobbs`) - `aircraftId`/`pilotInCommandId`/`coPilotId` are
+pasted-in ids for now, no search picker yet.
 
 ## 2. Goals
 
@@ -150,11 +150,12 @@ can't each run their own Caddy container bound to host ports 80/443. See that re
 
 In rough priority order:
 
-1. **Pilot vs. account.** `hobbs`'s `Pilot` currently conflates "a person recordable on a flight"
-   with "an account holder" - needed before real logbook entries can name a co-pilot who hasn't
-   signed up.
-2. **Logbook screens.** Viewing/creating `FlightEntry` rows, matching the CAP804/FCL.050 fields
-   `hobbs` already models.
+1. **Pilot/aircraft search or pickers.** `aircraftId`/`pilotInCommandId`/`coPilotId` are pasted-in
+   ids on the create-entry screen today - workable for one real user's worth of test data, but
+   there's no non-admin search endpoint yet to build a real picker against (`hobbs`'s
+   `GET /admin/pilots` is admin-only, and there's no aircraft equivalent at all).
+2. **Editing/deleting a flight entry.** Only create/view/list exist - no way to fix a mistyped
+   entry or remove one yet.
 3. **Photo-to-logbook OCR.** Take a picture of a paper logbook page, extract entries from it.
 4. **The iOS app.** This repo is web-only today; iOS (and eventually Android) come from the same
    Flutter codebase.
