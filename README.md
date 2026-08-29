@@ -1,8 +1,20 @@
 # hobbs-ui
 
 Flutter web client for [Hobbs](https://github.com/mojofunk5/hobbs), a self-hosted PPL flight
-logbook. This first version is a barebones connectivity check - one screen that calls the backend's
-`GET /health` and shows the result. Real screens (logbook entries, GPS recording, etc.) come later.
+logbook. Live at [hobbs.bssd.co.uk](https://hobbs.bssd.co.uk).
+
+## What's here today
+
+- **Welcome** - plane icon, Log in / Register
+- **Register** / **Log in** (with a "Remember my email" checkbox)
+- **Reset password** - request a code by email, then confirm with the 6-digit code and a new
+  password. Deep-linkable from the actual emailed reset link
+  (`hobbs.bssd.co.uk/reset-password?email=&code=`) straight into a locked, pre-filled confirm step
+- **Signed in** - a bare landing screen confirming auth works end to end; real logbook screens are
+  still to come
+
+See `docs/architecture-brief.md` for how this is put together, and its Open Work section for what's
+next.
 
 ## Running locally
 
@@ -12,6 +24,16 @@ Requires the Hobbs backend running (default: `http://localhost:8080` - see that 
 flutter pub get
 flutter run -d chrome --dart-define=API_BASE=http://localhost:8080
 ```
+
+## Running tests
+
+```bash
+flutter analyze
+flutter test
+```
+
+See `docs/architecture-brief.md`'s Testing section for the `MockClient`/`SharedPreferences` mocking
+patterns used throughout.
 
 ## Building for production
 
