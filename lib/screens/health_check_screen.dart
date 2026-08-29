@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../api/api_base.dart';
+import 'login_screen.dart';
 import 'register_screen.dart';
 
 enum _HealthState { loading, up, down }
@@ -88,11 +89,25 @@ class _HealthCheckPageState extends State<HealthCheckPage> {
             const SizedBox(height: 24),
             OutlinedButton(onPressed: _checkHealth, child: const Text('Retry')),
             const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: () => Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const RegisterScreen())),
-              child: const Text('Register'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                OutlinedButton(
+                  onPressed: () => Navigator.of(
+                    context,
+                  ).push(
+                      MaterialPageRoute(builder: (_) => const LoginScreen())),
+                  child: const Text('Log in'),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(
+                    context,
+                  ).push(MaterialPageRoute(
+                      builder: (_) => const RegisterScreen())),
+                  child: const Text('Register'),
+                ),
+              ],
             ),
           ],
         ),
