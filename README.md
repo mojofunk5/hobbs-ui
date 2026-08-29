@@ -19,24 +19,16 @@ flutter run -d chrome --dart-define=API_BASE=http://localhost:8080
 flutter build web --release
 ```
 
-Output lands in `build/web/`. In production this is served by Caddy (see `Caddyfile`), which also
-reverse-proxies `/api/*` to the backend - so the deployed build uses the default `API_BASE=/api`
-(same-origin, no `--dart-define` needed).
-
-## Running the Caddy stack locally
-
-```bash
-cp .env.example .env
-docker compose up -d
-```
-
-Brings up Caddy on `${HTTP_PORT:-80}`/`${HTTPS_PORT:-443}`, serving whatever's symlinked at
-`/opt/hobbs-ui/current` (a real deploy artifact - not built by this compose file) and proxying
-`/api/*` to `hobbs`'s own compose stack over the shared `hobbs-net` external network.
+Output lands in `build/web/`. In production this is served by the shared
+[`caddy`](https://github.com/mojofunk5/caddy) repo's reverse proxy, which also proxies `/api/*` to
+the backend - so the deployed build uses the default `API_BASE=/api` (same-origin, no
+`--dart-define` needed). Caddy isn't part of this repo - see `caddy` for why (two frontends can't
+each run their own Caddy container bound to host ports 80/443).
 
 ## Deployment
 
 `.github/workflows/deploy.yml` builds and deploys to the VPS on every push to `master`: `flutter
-build web`, SCP the output to `/opt/hobbs-ui/releases/<sha>/` on the VPS, symlink `current` to it,
-sync `docker-compose.yml`/`Caddyfile`, reload Caddy. Needs a `VPS_SSH_KEY` repository secret - see
+build web`, SCP the output to `/opt/hobbs-ui/releases/<sha>/` on the VPS, symlink `current` to it.
+The shared Caddy instance (see `caddy` repo) reads through that symlink on every request, so no
+reload is needed here. Needs a `VPS_SSH_KEY` repository secret - see
 `~/Documents/ClaudeContext/ci-deploy-keys.md` for the generic setup process.

@@ -61,9 +61,3 @@ jobs:
           # shellcheck disable=SC2029  # deliberate: $SHA only exists on the runner, expand it locally
           ssh "${SSH_OPTS[@]}" root@213.171.213.90 \
             "cd /opt/hobbs-ui && ln -sfn releases/$SHA current && ls -1dt releases/*/ | tail -n +6 | xargs -r rm -rf"
-          # Caddy's own compose stack lives here too - sync its config and bring it up/reload on
-          # every deploy. Idempotent when neither file changed (no-op recreate + harmless reload), so
-          # this is safe to run even on deploys that only touch static files.
-          scp "${SSH_OPTS[@]}" docker-compose.yml Caddyfile root@213.171.213.90:/opt/hobbs-ui/
-          ssh "${SSH_OPTS[@]}" root@213.171.213.90 \
-            "cd /opt/hobbs-ui && docker compose pull caddy && docker compose up -d caddy && docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile"
