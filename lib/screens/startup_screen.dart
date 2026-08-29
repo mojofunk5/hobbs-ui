@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../models/session.dart';
 import '../session_store.dart';
-import 'health_check_screen.dart';
 import 'signed_in_screen.dart';
+import 'welcome_screen.dart';
 
 /// Decides the app's initial screen: straight to [SignedInScreen] if a session was already
-/// persisted (survives a page reload), otherwise the health-check screen.
+/// persisted (survives a page reload), otherwise the welcome screen.
 class StartupScreen extends StatefulWidget {
   const StartupScreen({super.key});
 
@@ -37,6 +37,6 @@ class _StartupScreenState extends State<StartupScreen> {
     }
     return _session != null
         ? SignedInScreen(session: _session!)
-        : const HealthCheckPage();
+        : const WelcomeScreen();
   }
 }

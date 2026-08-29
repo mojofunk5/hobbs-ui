@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/session.dart';
 import '../session_store.dart';
 import '../widgets/responsive_page.dart';
-import 'health_check_screen.dart';
+import 'welcome_screen.dart';
 
 class SignedInScreen extends StatelessWidget {
   const SignedInScreen({super.key, required this.session});
@@ -14,7 +14,7 @@ class SignedInScreen extends StatelessWidget {
     await SessionStore.clear();
     if (context.mounted) {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HealthCheckPage()),
+        MaterialPageRoute(builder: (_) => const WelcomeScreen()),
         (route) => false,
       );
     }

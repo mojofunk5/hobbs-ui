@@ -34,6 +34,36 @@ class AuthApi {
       _postForSession('/auth/login',
           {'identifier': identifier, 'password': password}, client);
 
+  /// Always 200 on the backend regardless of whether the email is a real account (never leaks
+  /// account existence) - so unlike the other calls here, there's no SessionDto to decode, just
+  /// success/failure.
+  static Future<void> requestPasswordReset(
+      {required String email, http.Client? client}) async {
+    final response = await (client ?? http.Client()).post(
+      Uri.parse('$apiBase/auth/password-reset'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email}),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiException(response.statusCode);
+    }
+  }
+
+  static Future<Session> confirmPasswordReset({
+    required String email,
+    required String code,
+    required String newPassword,
+    http.Client? client,
+  }) =>
+      _postForSession(
+          '/auth/password-reset/confirm',
+          {
+            'email': email,
+            'code': code,
+            'newPassword': newPassword,
+          },
+          client);
+
   static Future<Session> _postForSession(
     String path,
     Map<String, String> body,
