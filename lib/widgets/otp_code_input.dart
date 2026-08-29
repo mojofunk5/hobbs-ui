@@ -5,15 +5,21 @@ import 'package:flutter/services.dart';
 /// OTP input UX from things-ui's password reset screen, matched here since hobbs's own reset code
 /// is the same shape (a 6-digit numeric string, see PasswordReset.generateCode()).
 class OtpCodeInput extends StatefulWidget {
-  const OtpCodeInput(
-      {super.key,
-      required this.onChanged,
-      this.length = 6,
-      this.enabled = true});
+  const OtpCodeInput({
+    super.key,
+    required this.onChanged,
+    this.length = 6,
+    this.enabled = true,
+    this.initialValue,
+  });
 
   final ValueChanged<String> onChanged;
   final int length;
   final bool enabled;
+
+  /// Pre-fills the boxes - e.g. the code arrived via an emailed link's ?code= param, matching
+  /// things-ui locking the code field in that case rather than leaving it blank for retyping.
+  final String? initialValue;
 
   @override
   State<OtpCodeInput> createState() => _OtpCodeInputState();
@@ -28,6 +34,13 @@ class _OtpCodeInputState extends State<OtpCodeInput> {
     super.initState();
     _controllers = List.generate(widget.length, (_) => TextEditingController());
     _focusNodes = List.generate(widget.length, (_) => FocusNode());
+    final initial = widget.initialValue;
+    if (initial != null && initial.isNotEmpty) {
+      for (var i = 0; i < initial.length && i < widget.length; i++) {
+        _controllers[i].text = initial[i];
+      }
+      widget.onChanged(initial);
+    }
   }
 
   @override
@@ -96,6 +109,8 @@ class _OtpCodeInputState extends State<OtpCodeInput> {
               onKeyEvent: (_, event) => _onKey(i, event),
               child: TextField(
                 enabled: widget.enabled,
+                autofocus:
+                    i == 0 && widget.enabled && widget.initialValue == null,
                 controller: _controllers[i],
                 focusNode: _focusNodes[i],
                 textAlign: TextAlign.center,

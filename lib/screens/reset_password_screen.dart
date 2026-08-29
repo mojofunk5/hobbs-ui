@@ -12,10 +12,17 @@ import 'signed_in_screen.dart';
 enum _Step { request, confirm }
 
 class ResetPasswordScreen extends StatefulWidget {
-  const ResetPasswordScreen({super.key, this.httpClient});
+  const ResetPasswordScreen(
+      {super.key, this.httpClient, this.initialEmail, this.initialCode});
 
   /// Overridable for tests - see test/reset_password_screen_test.dart.
   final http.Client? httpClient;
+
+  /// Set when arriving via the emailed reset link (main.dart parses ?email=&code= from the
+  /// loading URL) - jumps straight to the confirm step with both pre-filled, matching things-ui's
+  /// handling of the same deep link.
+  final String? initialEmail;
+  final String? initialCode;
 
   @override
   State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
@@ -27,10 +34,22 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final _emailController = TextEditingController();
   final _newPasswordController = TextEditingController();
 
-  _Step _step = _Step.request;
+  late _Step _step;
+  late bool _codeLocked;
   String _code = '';
   bool _submitting = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _codeLocked = widget.initialEmail != null && widget.initialCode != null;
+    _step = _codeLocked ? _Step.confirm : _Step.request;
+    if (_codeLocked) {
+      _emailController.text = widget.initialEmail!;
+      _code = widget.initialCode!;
+    }
+  }
 
   @override
   void dispose() {
@@ -105,6 +124,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   void _useADifferentEmail() {
     setState(() {
       _step = _Step.request;
+      _codeLocked = false;
       _code = '';
       _newPasswordController.clear();
       _error = null;
@@ -184,7 +204,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             enabled: false,
           ),
           const SizedBox(height: 16),
-          OtpCodeInput(onChanged: (code) => _code = code),
+          OtpCodeInput(
+            onChanged: (code) => _code = code,
+            initialValue: _codeLocked ? widget.initialCode : null,
+            enabled: !_codeLocked,
+          ),
           const SizedBox(height: 16),
           TextFormField(
             controller: _newPasswordController,

@@ -95,4 +95,35 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets(
+      'a deep link with email and code jumps straight to a locked confirm step',
+      (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: ResetPasswordScreen(
+            initialEmail: 'wills@example.com', initialCode: '123456'),
+      ),
+    );
+
+    expect(find.text('New password'), findsOneWidget);
+    expect(find.text('Send reset code'), findsNothing);
+
+    final emailField =
+        tester.widget<TextFormField>(find.byType(TextFormField).first);
+    expect(emailField.enabled, isFalse);
+    expect(emailField.initialValue, 'wills@example.com');
+
+    final otpBoxes = find.descendant(
+      of: find.byType(OtpCodeInput),
+      matching: find.byType(TextField),
+    );
+    for (var i = 0; i < 6; i++) {
+      final box = tester.widget<TextField>(otpBoxes.at(i));
+      expect(box.enabled, isFalse);
+      expect(box.controller?.text, '123456'[i]);
+    }
+  });
 }
