@@ -119,6 +119,17 @@ a reload. Would need real named routes to fix properly - not worth it for one sc
 Reverse-chronological. Never delete an entry - a later decision that supersedes an earlier one says
 so explicitly.
 
+### Decision (2026-08-30): cache the Flutter SDK install and skip the wasm dry-run in CI
+Two small, independently-verified CI speedups - full numbers and reasoning in
+[`docs/ci-performance.md`](ci-performance.md), this is the terse version. `subosito/flutter-action`
+was reinstalling the whole Flutter SDK from scratch on every single run (~59s of the build job) with
+no caching enabled - added `cache: true`. Separately, `flutter build web --release` runs an advisory
+wasm-compatibility dry-run compile by default even though this app has never shipped `--wasm` - added
+`--no-wasm-dry-run`, verified locally that `main.dart.js` comes out byte-for-byte identical with or
+without it (only an inert placeholder entry in `flutter_bootstrap.js`'s informational build-target
+list differs). Confirmed on real CI runs, not just locally: SDK install ~59s -> ~13-21s, the web build
+~38s -> ~26-27s.
+
 ### Decision (2026-08-30): docs-only commits skip `build` via a conditional job, not a trigger-level path filter
 `build.yml` originally considered a trigger-level `paths-ignore` to skip CI for docs-only commits
 (mirroring the equivalent fix in `hobbs`'s `build.yml`) - rejected once checked against this repo's
