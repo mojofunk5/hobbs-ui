@@ -13,20 +13,37 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     outputs:
-      docs_only: ${{ steps.filter.outputs.docs_only }}
+      docs_only: ${{ steps.check.outputs.docs_only }}
     steps:
       - uses: actions/checkout@v7
-      - uses: dorny/paths-filter@v3
-        id: filter
         with:
-          # every, not the default some - only skip when ALL changed files are docs. A commit that
-          # touches README.md/docs/architecture-brief.md alongside real code must still run the full
-          # build.
-          predicate-quantifier: every
-          filters: |
-            docs_only:
-              - '**/*.md'
-              - 'docs/**'
+          fetch-depth: 0
+      # Hand-rolled rather than dorny/paths-filter's predicate-quantifier: every, after that option
+      # turned out not to mean what it looked like it meant - it checks "does every declared PATTERN
+      # have at least one matching file", not "does every changed FILE match a pattern". A single doc
+      # file satisfies both '**/*.md' and 'docs/**' on its own, so a commit that also touched a real
+      # code file alongside one doc file would get wrongly classified docs-only and have its build
+      # silently skipped - confirmed the hard way on hobbs (see hobbs's docs/CI_PERFORMANCE.md and
+      # this repo's docs/ci-performance.md), no PR here happened to hit it in practice but the same
+      # bug was present. This loop checks every changed file individually against the docs patterns
+      # instead, verified locally across docs-only/mixed/code-only/nested-docs-path/false-positive-
+      # filename cases before shipping.
+      - id: check
+        run: |
+          BASE="${{ github.event.before }}"
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          docs_only=true
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            case "$f" in
+              *.md|docs/*) ;;
+              *) docs_only=false ;;
+            esac
+          done < <(git diff --name-only "$BASE" "${{ github.sha }}")
+          echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
 
   build:
     needs: changes
