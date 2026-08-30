@@ -7,8 +7,9 @@ in shape; content is this project's own.
 
 A Flutter client for `hobbs`, a self-hosted PPL flight logbook backend. Today: authentication
 (register, login, password reset) plus the create/view/list logbook-entry screens
-(`docs/plans/logbook-entries.md` in `hobbs`) - `aircraftId`/`pilotInCommandId`/`coPilotId` are
-pasted-in ids for now, no search picker yet.
+(`docs/plans/logbook-entries.md` in `hobbs`) - pilot in command/co-pilot are picked via a typeahead
+against `GET /pilot?search=` (`docs/plans/pilot-picker.md` in `hobbs`); `aircraftId` is still a
+pasted-in id, no aircraft picker yet.
 
 ## 2. Goals
 
@@ -150,10 +151,11 @@ can't each run their own Caddy container bound to host ports 80/443. See that re
 
 In rough priority order:
 
-1. **Pilot/aircraft search or pickers.** `aircraftId`/`pilotInCommandId`/`coPilotId` are pasted-in
-   ids on the create-entry screen today - workable for one real user's worth of test data, but
-   there's no non-admin search endpoint yet to build a real picker against (`hobbs`'s
-   `GET /admin/pilots` is admin-only, and there's no aircraft equivalent at all).
+1. **Aircraft search or picker.** `aircraftId` is still a pasted-in id on the create-entry screen -
+   workable for one real user's worth of test data, but there's no non-admin search endpoint yet to
+   build a real picker against, and no design for one (`hobbs`'s Open work notes this as not yet
+   designed). The pilot half of this is done - `PilotPicker` (`lib/widgets/pilot_picker.dart`)
+   against `GET /pilot?search=`, see `hobbs`'s `docs/plans/pilot-picker.md`.
 2. **Editing/deleting a flight entry.** Only create/view/list exist - no way to fix a mistyped
    entry or remove one yet.
 3. **Photo-to-logbook OCR.** Take a picture of a paper logbook page, extract entries from it.

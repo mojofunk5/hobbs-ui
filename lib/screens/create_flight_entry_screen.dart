@@ -5,14 +5,16 @@ import '../api/api_exception.dart';
 import '../api/flight_api.dart';
 import '../format.dart';
 import '../models/flight_entry.dart';
+import '../models/pilot_summary.dart';
 import '../models/session.dart';
+import '../widgets/pilot_picker.dart';
 import '../widgets/responsive_page.dart';
 import 'view_flight_entry_screen.dart';
 
 /// The CAP804/FCL.050 logbook entry form - see docs/plans/logbook-entries.md (chunk 2) in the
-/// hobbs repo. aircraftId/pilotInCommandId/coPilotId are plain pasted-in ids for now: no
-/// pilot/aircraft search picker exists yet (see that plan's "no pilot search endpoint" note), so
-/// they're created ahead of time via POST /pilot or POST /aircraft and pasted in here.
+/// hobbs repo. Pilot in command/co-pilot are picked via [PilotPicker] against GET /pilot?search=
+/// (see docs/plans/pilot-picker.md); aircraftId is still a plain pasted-in id for now - that
+/// picker is a separate, not-yet-designed story (see CLAUDE.md's Open work).
 class CreateFlightEntryScreen extends StatefulWidget {
   const CreateFlightEntryScreen(
       {super.key, required this.session, this.httpClient});
@@ -33,8 +35,6 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
   final _aircraftIdController = TextEditingController();
   final _departurePlaceController = TextEditingController();
   final _arrivalPlaceController = TextEditingController();
-  final _pilotInCommandIdController = TextEditingController();
-  final _coPilotIdController = TextEditingController();
   final _singleEngineMinutesController = TextEditingController(text: '0');
   final _multiEngineMinutesController = TextEditingController(text: '0');
   final _totalMinutesController = TextEditingController();
@@ -53,6 +53,13 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
   TimeOfDay _departureTime = TimeOfDay.now();
   TimeOfDay _arrivalTime = TimeOfDay.now();
 
+  // Defaults to the caller themselves - the common solo-flight case - still editable/clearable
+  // for a dual/instructed flight. Co-pilot has no such default; most flights don't have one.
+  late PilotSummary? _pilotInCommand =
+      PilotSummary(id: widget.session.pilotId, name: widget.session.name);
+  PilotSummary? _coPilot;
+  String? _pilotInCommandError;
+
   bool _submitting = false;
   String? _error;
   FlightEntry? _created;
@@ -62,8 +69,6 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
     _aircraftIdController.dispose();
     _departurePlaceController.dispose();
     _arrivalPlaceController.dispose();
-    _pilotInCommandIdController.dispose();
-    _coPilotIdController.dispose();
     _singleEngineMinutesController.dispose();
     _multiEngineMinutesController.dispose();
     _totalMinutesController.dispose();
@@ -112,7 +117,10 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
       int.tryParse(controller.text.trim()) ?? 0;
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    final formValid = _formKey.currentState!.validate();
+    final picMissing = _pilotInCommand == null;
+    setState(() => _pilotInCommandError = picMissing ? 'Required' : null);
+    if (!formValid || picMissing) return;
     setState(() {
       _submitting = true;
       _error = null;
@@ -126,10 +134,8 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
         departureTime: _combine(_departureTime),
         arrivalPlace: _arrivalPlaceController.text.trim(),
         arrivalTime: _combine(_arrivalTime),
-        pilotInCommandId: _pilotInCommandIdController.text.trim(),
-        coPilotId: _coPilotIdController.text.trim().isEmpty
-            ? null
-            : _coPilotIdController.text.trim(),
+        pilotInCommandId: _pilotInCommand!.id,
+        coPilotId: _coPilot?.id,
         singleEngineMinutes: _intOr0(_singleEngineMinutesController),
         multiEngineMinutes: _intOr0(_multiEngineMinutesController),
         totalMinutes: _intOr0(_totalMinutesController),
@@ -153,7 +159,7 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
         _error = switch (e.statusCode) {
           400 => 'Check the entered fields - one or more is invalid.',
           404 =>
-            'aircraftId, pilotInCommandId, or coPilotId does not match an existing record.',
+            'The aircraft or a picked pilot no longer exists - please re-check your selections.',
           _ => 'Could not save the entry (HTTP ${e.statusCode}).',
         };
       });
@@ -254,18 +260,25 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
                   onTap: () => _pickTime(false),
                 ),
                 const SizedBox(height: 12),
-                TextFormField(
-                  controller: _pilotInCommandIdController,
-                  decoration:
-                      const InputDecoration(labelText: 'Pilot in command id'),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Required' : null,
+                PilotPicker(
+                  key: const Key('pilotInCommandPicker'),
+                  sessionId: widget.session.sessionId,
+                  label: 'Pilot in command',
+                  initialValue: _pilotInCommand,
+                  errorText: _pilotInCommandError,
+                  httpClient: widget.httpClient,
+                  onChanged: (pilot) => setState(() {
+                    _pilotInCommand = pilot;
+                    if (pilot != null) _pilotInCommandError = null;
+                  }),
                 ),
                 const SizedBox(height: 12),
-                TextFormField(
-                  controller: _coPilotIdController,
-                  decoration: const InputDecoration(
-                      labelText: 'Co-pilot id (optional)'),
+                PilotPicker(
+                  key: const Key('coPilotPicker'),
+                  sessionId: widget.session.sessionId,
+                  label: 'Co-pilot (optional)',
+                  httpClient: widget.httpClient,
+                  onChanged: (pilot) => setState(() => _coPilot = pilot),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
