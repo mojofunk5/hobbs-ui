@@ -52,6 +52,13 @@ class _PilotPickerState extends State<PilotPicker> {
   bool _searched = false;
   Timer? _debounce;
 
+  // Guards against an out-of-order response: cancelling _debounce only stops a *future* timer
+  // firing, it can't cancel a request that's already in flight, so typing fast enough to have two
+  // searches in flight at once used to let an earlier, slower request's response land after a
+  // later one's and silently overwrite it with stale results. Each _search call captures its own
+  // sequence number and only applies its response if nothing newer has been issued since.
+  int _searchSeq = 0;
+
   @override
   void initState() {
     super.initState();
@@ -92,6 +99,7 @@ class _PilotPickerState extends State<PilotPicker> {
   }
 
   Future<void> _search(String query) async {
+    final seq = ++_searchSeq;
     setState(() => _searching = true);
     try {
       final results = await PilotApi.search(
@@ -99,14 +107,14 @@ class _PilotPickerState extends State<PilotPicker> {
         query: query.isEmpty ? null : query,
         client: widget.httpClient,
       );
-      if (!mounted) return;
+      if (!mounted || seq != _searchSeq) return;
       setState(() {
         _suggestions = results;
         _searching = false;
         _searched = true;
       });
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || seq != _searchSeq) return;
       setState(() {
         _suggestions = [];
         _searching = false;

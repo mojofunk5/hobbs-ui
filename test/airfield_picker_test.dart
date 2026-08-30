@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -102,6 +104,44 @@ void main() {
     // Still within the debounce window - no request has fired yet, but the spinner should
     // already be visible so typing doesn't look like it did nothing.
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
+  });
+
+  testWidgets(
+      'an earlier request resolving after a later one does not overwrite the fresher results',
+      (tester) async {
+    final completers = <String, Completer<http.Response>>{};
+    final client = MockClient((request) async {
+      final query = request.url.queryParameters['search'];
+      if (query == null || query.isEmpty) {
+        // The initial on-focus load, irrelevant to this race - resolve it immediately.
+        return http.Response('[]', 200);
+      }
+      return completers.putIfAbsent(query, Completer<http.Response>.new).future;
+    });
+
+    await pumpPicker(tester, client: client, onChanged: (_) {});
+    await tester.tap(find.byType(TextField));
+    await tester.pump();
+
+    // Two searches end up in flight at once - typing "sh", pausing long enough for its debounced
+    // search to fire, then typing on to "sher" and pausing again before the first has responded.
+    await tester.enterText(find.byType(TextField), 'sh');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.enterText(find.byType(TextField), 'sher');
+    await tester.pump(const Duration(milliseconds: 350));
+
+    // Resolve out of order: the later, more specific request ("sher") finishes first; the
+    // earlier, now-stale request ("sh") finishes after it. The stale response must not win.
+    completers['sher']!.complete(http.Response(
+        '[{"id":"airfield-1","icaoCode":"EGCJ","name":"Sherburn-in-Elmet Airfield",'
+        '"municipality":"Sherburn-in-Elmet","isoCountry":"GB","isoRegion":"GB-ENG",'
+        '"latitude":53.79,"longitude":-1.23,"elevationFt":20,"type":"small_airport"}]',
+        200));
+    await tester.pump();
+    completers['sh']!.complete(http.Response('[]', 200));
+    await tester.pump();
+
+    expect(find.text('EGCJ - Sherburn-in-Elmet Airfield'), findsOneWidget);
   });
 
   testWidgets('selecting a suggestion calls onChanged and fills the field',
