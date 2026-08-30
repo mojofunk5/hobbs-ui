@@ -15,12 +15,16 @@ logbook. Live at [hobbs.bssd.co.uk](https://hobbs.bssd.co.uk).
   picked via a typeahead against `GET /pilot?search=` (PIC defaults to yourself), with an inline
   "create new pilot" fallback - see
   [hobbs's docs/plans/pilot-picker.md](https://github.com/mojofunk5/hobbs/blob/master/docs/plans/pilot-picker.md).
-  `aircraftId` is still a pasted-in id for now - no aircraft picker yet (see
-  [hobbs's docs/plans/logbook-entries.md](https://github.com/mojofunk5/hobbs/blob/master/docs/plans/logbook-entries.md))
+  Aircraft is picked via a typeahead against `GET /aircraft?search=` - no "create new" fallback,
+  since aircraft is reference data seeded from OpenSky, not pilot-submitted - see
+  [hobbs's docs/plans/aircraft-picker.md](https://github.com/mojofunk5/hobbs/blob/master/docs/plans/aircraft-picker.md)
 - **Your flights** - lists every entry for the signed-in pilot (`GET /flight`, no pagination yet),
   each row opening the view screen below
 - **View a flight** - looks up one entry by id (`GET /flight/{id}`); reachable directly (paste an
   id) or via "Your flights" / straight after creating one
+- **Browse aircraft** - search-first view over the same `GET /aircraft?search=` reference data
+  (registration/make/model/owner/operator/built/engines/serial number), not scoped to the
+  flight-entry form
 
 See `docs/architecture-brief.md` for how this is put together, and its Open Work section for what's
 next.

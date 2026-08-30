@@ -8,8 +8,9 @@ in shape; content is this project's own.
 A Flutter client for `hobbs`, a self-hosted PPL flight logbook backend. Today: authentication
 (register, login, password reset) plus the create/view/list logbook-entry screens
 (`docs/plans/logbook-entries.md` in `hobbs`) - pilot in command/co-pilot are picked via a typeahead
-against `GET /pilot?search=` (`docs/plans/pilot-picker.md` in `hobbs`); `aircraftId` is still a
-pasted-in id, no aircraft picker yet.
+against `GET /pilot?search=` (`docs/plans/pilot-picker.md` in `hobbs`), and aircraft is picked via a
+typeahead against `GET /aircraft?search=` (`docs/plans/aircraft-picker.md` in `hobbs`) - plus a
+Browse Aircraft screen for searching the same reference data outside the flight-entry form.
 
 ## 2. Goals
 
@@ -175,18 +176,11 @@ can't each run their own Caddy container bound to host ports 80/443. See that re
 
 In rough priority order:
 
-1. **Aircraft search or picker.** `aircraftId` is still a pasted-in id on the create-entry screen -
-   workable for one real user's worth of test data, but there's no non-admin search endpoint yet to
-   build a real picker against, and no design for one (`hobbs`'s Open work notes this as not yet
-   designed). The pilot half of this is done - `PilotPicker` (`lib/widgets/pilot_picker.dart`)
-   against `GET /pilot?search=`, see `hobbs`'s `docs/plans/pilot-picker.md`.
-2. **Editing/deleting a flight entry.** Only create/view/list exist - no way to fix a mistyped
+1. **Editing/deleting a flight entry.** Only create/view/list exist - no way to fix a mistyped
    entry or remove one yet.
-3. **Photo-to-logbook OCR.** Take a picture of a paper logbook page, extract entries from it.
-4. **The iOS app.** This repo is web-only today; iOS (and eventually Android) come from the same
+2. **Photo-to-logbook OCR.** Take a picture of a paper logbook page, extract entries from it.
+3. **The iOS app.** This repo is web-only today; iOS (and eventually Android) come from the same
    Flutter codebase.
-5. **GPS-recording-to-logbook.** Start a recording, derive a draft `FlightEntry` from the track on
+4. **GPS-recording-to-logbook.** Start a recording, derive a draft `FlightEntry` from the track on
    completion - the MVP-completing feature. Depends on the iOS app existing first (background
    location needs a real mobile platform, not a web tab).
-6. **Split up `CreateFlightEntryScreen`.** At 440 lines it's the largest file in the app - designed,
-   not yet implemented, see [`docs/plans/split-create-flight-entry-screen.md`](plans/split-create-flight-entry-screen.md).
