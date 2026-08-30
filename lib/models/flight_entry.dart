@@ -10,6 +10,8 @@ class FlightEntry {
   final DateTime departureTime;
   final String arrivalPlace;
   final DateTime arrivalTime;
+  final String? departureAirfieldId;
+  final String? arrivalAirfieldId;
   final String pilotInCommandId;
   final String? coPilotId;
   final int singleEngineMinutes;
@@ -35,6 +37,8 @@ class FlightEntry {
     required this.departureTime,
     required this.arrivalPlace,
     required this.arrivalTime,
+    this.departureAirfieldId,
+    this.arrivalAirfieldId,
     required this.pilotInCommandId,
     this.coPilotId,
     required this.singleEngineMinutes,
@@ -61,6 +65,8 @@ class FlightEntry {
         departureTime: DateTime.parse(json['departureTime'] as String),
         arrivalPlace: json['arrivalPlace'] as String,
         arrivalTime: DateTime.parse(json['arrivalTime'] as String),
+        departureAirfieldId: json['departureAirfieldId'] as String?,
+        arrivalAirfieldId: json['arrivalAirfieldId'] as String?,
         pilotInCommandId: json['pilotInCommandId'] as String,
         coPilotId: json['coPilotId'] as String?,
         singleEngineMinutes: json['singleEngineMinutes'] as int,
