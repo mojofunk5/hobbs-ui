@@ -68,6 +68,22 @@ that, rather than assume it. Fixed the same way as `hobbs`: a plain shell loop o
 `git diff --name-only`, checking each changed file individually - verified locally against five cases
 before shipping.
 
+### That fix's own `BASE` was wrong for PR branches that merge master back in
+Compared each commit against `github.event.before` - correct for `master` (sequential merges only)
+but wrong for a feature branch once it merges `master` back into itself, a normal thing to do to stay
+current. That merge commit's diff against `github.event.before` (the branch's own previous tip)
+necessarily includes everything `master` changed in the meantime, not just the branch's own content.
+Confirmed here directly: a genuinely docs-only PR ([#21](https://github.com/mojofunk5/hobbs-ui/pull/21))
+merged `master` in, incidentally picking up an unrelated CI workflow change, and got wrongly
+classified as *not* docs-only as a result - a full unnecessary build ran for a PR that only ever
+touched documentation. The opposite direction of mistake from the `paths-filter` bug above (that one
+wrongly skipped a real build; this one wrongly ran an unnecessary one), but the identical root cause:
+comparing against the wrong base commit. Diagnosed by walking the merge commit's own parents (`git log
+--graph`, `git show --no-patch --format "%H %P"`) to find exactly which commit's diff was actually
+being computed, rather than guessing. Fixed by branching on `github.ref`: `github.event.before` only
+for pushes to `master`, `git merge-base origin/master HEAD` for every other branch - verified locally
+against the exact bug commit before shipping.
+
 ## Open opportunities
 
 ### Nothing else obvious identified yet
