@@ -126,6 +126,10 @@ class _AirfieldPickerState extends State<AirfieldPicker> {
 
   @override
   Widget build(BuildContext context) {
+    final noMatches = _selected == null &&
+        _searched &&
+        !_searching &&
+        _suggestions.isEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -135,6 +139,7 @@ class _AirfieldPickerState extends State<AirfieldPicker> {
           decoration: InputDecoration(
             labelText: widget.label,
             errorText: widget.errorText,
+            helperText: noMatches ? 'No airfields found' : null,
             suffixIcon: _searching
                 ? const Padding(
                     padding: EdgeInsets.all(12),

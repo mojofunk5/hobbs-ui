@@ -136,6 +136,19 @@ void main() {
         findsOneWidget);
   });
 
+  testWidgets('shows a no-matches hint when a search returns nothing',
+      (tester) async {
+    final client = MockClient((request) async => http.Response('[]', 200));
+
+    await pumpPicker(tester, client: client, onChanged: (_) {});
+    await tester.tap(find.byType(TextField));
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), 'Sherbrun');
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(find.text('No airfields found'), findsOneWidget);
+  });
+
   testWidgets('editing the text clears a prior selection until a new pick',
       (tester) async {
     Airfield? selected = sherburn;
