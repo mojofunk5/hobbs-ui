@@ -35,23 +35,38 @@ placeholder entry in `flutter_bootstrap.js`'s informational build-target list.
 This repo's branch protection requires the `build` status check - the naive fix (a trigger-level
 `paths-ignore` on the whole workflow) would have left that check permanently stuck "waiting to be
 reported" and blocked merging, since a workflow that never triggers never posts any status at all.
-Fixed with an always-running `changes` job (`dorny/paths-filter`, `predicate-quantifier: every` - only
-skip when *every* changed file is docs, not merely some) whose output conditionally skips the
-expensive `build` job via `if:`. A job skipped this way still reports "skipped", which GitHub counts
-as passing a required check. Verified with a real docs-only PR ([#17](https://github.com/mojofunk5/hobbs-ui/pull/17)):
+Fixed with an always-running `changes` job whose output conditionally skips the expensive `build` job
+via `if:`. A job skipped this way still reports "skipped", which GitHub counts as passing a required
+check. Verified with a real docs-only PR ([#17](https://github.com/mojofunk5/hobbs-ui/pull/17)):
 `build`/`deploy` both showed "skipped" and the PR still reported `MERGEABLE`.
+
+The `changes` job's own docs-only detection went through two versions - see "What didn't work" for
+why the first one (`dorny/paths-filter`) had to be replaced with a plain shell loop.
 
 ## What didn't work (and why)
 
-Nothing shipped here failed the way `hobbs`'s Docker cache-mount attempt did - but the *first* version
-of the docs-only-skip fix (a trigger-level `paths-ignore`, mirroring what looked like the working
-`hobbs` fix at the time) would have broken merging entirely on this repo specifically, caught before
-shipping by checking this repo's actual branch protection config
+### The first version of the docs-only-skip fix itself
+A trigger-level `paths-ignore` (mirroring what looked like the working `hobbs` fix at the time) would
+have broken merging entirely on this repo specifically, caught before shipping by checking this
+repo's actual branch protection config
 (`gh api repos/mojofunk5/hobbs-ui/branches/master/protection`) rather than assuming the same approach
 would carry over safely. Branch protection is a GitHub feature offered free only on *public* repos -
 `hobbs-ui` is public and has had `build` required since branch protection was added (see
 `architecture-brief.md`'s 2026-08-29 entry) - a private repo wouldn't have this failure mode at all,
 but also wouldn't have free branch protection to lose.
+
+### `dorny/paths-filter`'s `predicate-quantifier: every`, take two
+Used it here too, with the same wrong assumption as `hobbs` (see that repo's `docs/CI_PERFORMANCE.md`
+for the full story): the option checks "does every declared *pattern* have at least one matching
+file", not "does every changed *file* match a pattern". With filters `['**/*.md', 'docs/**']`, a
+single changed doc file satisfies both patterns on its own, so a commit that also touched real code
+alongside one doc file would have been wrongly classified docs-only and had its `build`/`deploy`
+silently skipped. No PR here happened to combine docs and code changes since this mechanism was
+introduced, so this never caused visible harm in practice - checked every run since (`gh run list`,
+cross-referencing each `build` job's conclusion against that commit's actual file list) to confirm
+that, rather than assume it. Fixed the same way as `hobbs`: a plain shell loop over
+`git diff --name-only`, checking each changed file individually - verified locally against five cases
+before shipping.
 
 ## Open opportunities
 
