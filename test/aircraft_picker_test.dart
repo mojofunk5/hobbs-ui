@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -76,6 +78,38 @@ void main() {
     // Still within the debounce window - no request has fired yet, but the spinner should
     // already be visible so typing doesn't look like it did nothing.
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
+  });
+
+  testWidgets(
+      'an earlier request resolving after a later one does not overwrite the fresher results',
+      (tester) async {
+    final completers = <String, Completer<http.Response>>{};
+    final client = MockClient((request) async {
+      final query = request.url.queryParameters['search']!;
+      return completers.putIfAbsent(query, Completer<http.Response>.new).future;
+    });
+
+    await pumpPicker(tester, client: client, onChanged: (_) {});
+
+    // Two searches end up in flight at once - typing "g-sa", pausing long enough for its
+    // debounced search to fire, then typing on to "g-sacr" and pausing again before the first
+    // has responded (this is the exact sequence that produced stale results in practice).
+    await tester.enterText(find.byType(TextField), 'g-sa');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.enterText(find.byType(TextField), 'g-sacr');
+    await tester.pump(const Duration(milliseconds: 350));
+
+    // Resolve out of order: the later, more specific request ("g-sacr") finishes first; the
+    // earlier, now-stale request ("g-sa") finishes after it. The stale response must not win.
+    completers['g-sacr']!.complete(http.Response(
+        '[{"id":"aircraft-1","registration":"G-SACR","make":"Cessna","model":"152"}]', 200));
+    await tester.pump();
+    completers['g-sa']!.complete(http.Response(
+        '[{"id":"aircraft-2","registration":"G-SAAA"}]', 200));
+    await tester.pump();
+
+    expect(find.text('G-SACR - Cessna 152'), findsOneWidget);
+    expect(find.text('G-SAAA'), findsNothing);
   });
 
   testWidgets('shows a no-matches message when the search returns nothing',
