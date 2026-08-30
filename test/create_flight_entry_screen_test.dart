@@ -14,6 +14,19 @@ void main() {
     admin: false,
   );
 
+  // The PilotPicker fields (PIC/co-pilot) issue GET /pilot?search= calls of their own (an initial
+  // one on focus, plus one per debounced keystroke) - route those to an empty list so they don't
+  // interfere with assertions about the FlightApi.createFlightEntry request itself.
+  http.Client wrapClient(
+      Future<http.Response> Function(http.Request) onCreateFlightEntry) {
+    return MockClient((request) async {
+      if (request.url.path.endsWith('/pilot')) {
+        return http.Response('[]', 200);
+      }
+      return onCreateFlightEntry(request);
+    });
+  }
+
   Future<void> pumpScreen(WidgetTester tester, {http.Client? client}) async {
     await tester.pumpWidget(MaterialApp(
       home: CreateFlightEntryScreen(session: session, httpClient: client),
@@ -24,24 +37,41 @@ void main() {
     await tester.enterText(find.byType(TextFormField).at(0), 'aircraft-1');
     await tester.enterText(find.byType(TextFormField).at(1), 'EGCM');
     await tester.enterText(find.byType(TextFormField).at(2), 'EGCC');
-    await tester.enterText(find.byType(TextFormField).at(3), 'pilot-2');
-    await tester.enterText(find.byType(TextFormField).at(5), '45');
+    // Pilot in command defaults to the caller (William) - already set, nothing to fill in here.
+    await tester.enterText(find.byType(TextFormField).at(3), '45');
   }
 
   testWidgets('does not submit when required fields are empty', (tester) async {
     var requestMade = false;
-    final client = MockClient((request) async {
+    final client = wrapClient((request) async {
       requestMade = true;
       return http.Response('', 200);
     });
 
     await pumpScreen(tester, client: client);
+    // Clear the PIC default so the "Required" path is exercised too. Flushes the picker's
+    // focus-triggered search and its debounced re-search after the text change, so no Timer is
+    // left pending when the test ends.
+    await tester.enterText(
+        find.descendant(
+            of: find.byKey(const Key('pilotInCommandPicker')),
+            matching: find.byType(TextField)),
+        '');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
     await tester.ensureVisible(find.widgetWithText(FilledButton, 'Save entry'));
     await tester.tap(find.widgetWithText(FilledButton, 'Save entry'));
     await tester.pump();
 
     expect(find.text('Required'), findsWidgets);
     expect(requestMade, isFalse);
+  });
+
+  testWidgets('pilot in command defaults to the caller themselves',
+      (tester) async {
+    await pumpScreen(tester, client: wrapClient((_) async => http.Response('', 200)));
+
+    expect(find.text('William'), findsOneWidget);
   });
 
   testWidgets('submitting the form saves the entry and shows its id',

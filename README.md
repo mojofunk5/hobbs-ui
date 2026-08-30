@@ -11,8 +11,11 @@ logbook. Live at [hobbs.bssd.co.uk](https://hobbs.bssd.co.uk).
   password. Deep-linkable from the actual emailed reset link
   (`hobbs.bssd.co.uk/reset-password?email=&code=`) straight into a locked, pre-filled confirm step
 - **Signed in** - landing screen with links into the logbook screens below
-- **Log a flight** - the CAP804/FCL.050 entry form (`POST /flight`). `aircraftId`/
-  `pilotInCommandId`/`coPilotId` are pasted-in ids for now - no search picker yet (see
+- **Log a flight** - the CAP804/FCL.050 entry form (`POST /flight`). Pilot in command/co-pilot are
+  picked via a typeahead against `GET /pilot?search=` (PIC defaults to yourself), with an inline
+  "create new pilot" fallback - see
+  [hobbs's docs/plans/pilot-picker.md](https://github.com/mojofunk5/hobbs/blob/master/docs/plans/pilot-picker.md).
+  `aircraftId` is still a pasted-in id for now - no aircraft picker yet (see
   [hobbs's docs/plans/logbook-entries.md](https://github.com/mojofunk5/hobbs/blob/master/docs/plans/logbook-entries.md))
 - **Your flights** - lists every entry for the signed-in pilot (`GET /flight`, no pagination yet),
   each row opening the view screen below
