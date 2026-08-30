@@ -31,6 +31,16 @@ flat list of `TextFormField`s. The length comes from two things, not many:
 - **Extract a small private `_MinutesField` helper** (label + `TextEditingController`) and build the
   five paired rows from a declarative list of `(controller, label)` pairs instead of five hand-written
   `Row`/`Expanded` blocks. Collapses ~100 lines of repetition to roughly 20-30.
+  - **Considered making this a shared `lib/widgets/` file now, since Open work item 2 (editing a
+    flight entry) will need the same editable fields** - `view_flight_entry_screen.dart` already
+    duplicates this field list today, just as read-only `_row(label, value)`s, so the duplication
+    pressure is real, not hypothetical. Decided to keep it private for now: we don't yet know whether
+    editing will be a new screen (a real second consumer, worth a shared file) or `CreateFlightEntryScreen`
+    itself gaining an edit mode (no second consumer at all), and designing a shared widget's API
+    before either is settled means guessing at requirements (initial values, disabled fields,
+    validation differences) no caller has stated yet. Writing `_MinutesField` with no dependencies on
+    the enclosing `State` keeps promoting it to `lib/widgets/` a trivial, mechanical move once the
+    edit screen's real shape is known - not a design cost paid twice.
 - **Extract the post-submit success view into a private `_FlightEntrySavedView` `StatelessWidget`**
   in the same file, taking `session`, `httpClient`, and the created `FlightEntry` as constructor
   params. Removes the second `build()` branch from the main widget entirely - `build()` becomes just
