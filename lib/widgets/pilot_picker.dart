@@ -125,6 +125,25 @@ class _PilotPickerState extends State<PilotPicker> {
     widget.onChanged(pilot);
   }
 
+  /// Lets a pilot pick someone else without first deleting the current selection's text by hand -
+  /// previously the only way back into the suggestion list was to select-all-and-retype, with no
+  /// visible sign a selection even existed beyond a small green checkmark.
+  void _clear() {
+    setState(() {
+      _selected = null;
+      _controller.clear();
+      _suggestions = [];
+      _searched = false;
+    });
+    widget.onChanged(null);
+    // requestFocus() only re-triggers _onFocusChanged's "load everything" behaviour when the
+    // field didn't already have focus (a no-op listener call otherwise, since this is usually
+    // tapped while the field is already focused) - search explicitly either way rather than
+    // depending on that transition.
+    _focusNode.requestFocus();
+    _search('');
+  }
+
   Future<void> _createNew(String name) async {
     setState(() => _searching = true);
     try {
@@ -146,6 +165,7 @@ class _PilotPickerState extends State<PilotPicker> {
     final query = _controller.text.trim();
     final showCreateOption =
         _searched && !_searching && _selected == null && query.isNotEmpty;
+    final noMatches = showCreateOption && _suggestions.isEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -156,6 +176,7 @@ class _PilotPickerState extends State<PilotPicker> {
           decoration: InputDecoration(
             labelText: widget.label,
             errorText: widget.errorText,
+            helperText: noMatches ? 'No matches - create a new pilot below' : null,
             suffixIcon: _searching
                 ? const Padding(
                     padding: EdgeInsets.all(12),
@@ -166,7 +187,11 @@ class _PilotPickerState extends State<PilotPicker> {
                     ),
                   )
                 : _selected != null
-                    ? const Icon(Icons.check_circle, color: Colors.green)
+                    ? IconButton(
+                        icon: const Icon(Icons.cancel, color: Colors.green),
+                        tooltip: 'Clear',
+                        onPressed: _clear,
+                      )
                     : null,
           ),
           onChanged: _onTextChanged,

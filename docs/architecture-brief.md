@@ -120,6 +120,33 @@ a reload. Would need real named routes to fix properly - not worth it for one sc
 Reverse-chronological. Never delete an entry - a later decision that supersedes an earlier one says
 so explicitly.
 
+### Decision (2026-08-30): typeahead picker UX conventions
+`AircraftPicker`/`PilotPicker`/`AirfieldPicker` all share one hand-rolled typeahead pattern (see
+`PilotPicker`'s own doc comment for why it's hand-rolled rather than built on Flutter's
+`Autocomplete`). Reported as "clunky" and "half the time don't look like they are doing anything" -
+traced to four missing pieces of feedback, now fixed across all three and worth holding every future
+picker (or any other async-search widget added later) to as a checklist, not just a one-off fix:
+
+1. **Feedback that it's doing something.** The debounce timer used to run for 300ms after every
+   keystroke with the "searching" spinner only appearing once the debounced search actually started -
+   a dead window that read as unresponsive even though nothing was hung. Fixed: the spinner shows
+   from the keystroke itself (see each widget's `_onTextChanged`).
+2. **Feedback that it's finished.** The spinner disappearing and either the suggestion list or a
+   "no matches" message appearing is the finish signal - already true before this decision, called
+   out here so it stays a deliberate property, not an accident of the state machine.
+3. **Feedback on what to do next when there are no results.** A bare "No X found" doesn't tell
+   someone what to try next. `AircraftPicker`/`AirfieldPicker` (reference data, no create flow) now
+   say "check the &lt;spelling/registration&gt; and try again"; `PilotPicker` (which does have a
+   create flow) now pairs its existing "Create pilot ..." tile with an explicit "No matches - create
+   a new pilot below" helper text, rather than leaving the create option to speak for itself.
+4. **A visible, reversible selection.** Once something was picked, the only indicator was a small
+   green checkmark, and the only way to search again was to select-all-and-retype the field's text
+   by hand - not obvious, and not discoverable. Fixed: the checkmark is now a tappable clear (X)
+   button (`Icons.cancel`, kept green so "you have a valid selection" is still the primary read) that
+   clears the field and - for `PilotPicker`/`AirfieldPicker`, which support an empty search - reopens
+   the full suggestion list immediately rather than leaving an empty field with nothing to pick until
+   something's typed.
+
 ### Decision (2026-08-30): cache the Flutter SDK install and skip the wasm dry-run in CI
 Two small, independently-verified CI speedups - full numbers and reasoning in
 [`docs/ci-performance.md`](ci-performance.md), this is the terse version. `subosito/flutter-action`

@@ -99,6 +99,30 @@ void main() {
   });
 
   testWidgets(
+      'tapping the clear icon removes the selection and reopens the suggestion list',
+      (tester) async {
+    PilotSummary? selected;
+    final client = MockClient((request) async =>
+        http.Response('[{"id":"pilot-2","name":"Louis"}]', 200));
+
+    await pumpPicker(tester, client: client,
+        onChanged: (pilot) => selected = pilot);
+    await tester.tap(find.byType(TextField));
+    await tester.pump();
+    await tester.tap(find.text('Louis'));
+    await tester.pump();
+
+    await tester.tap(find.byIcon(Icons.cancel));
+    await tester.pump();
+
+    expect(selected, isNull);
+    expect(find.widgetWithText(TextField, 'Louis'), findsNothing);
+    // Reopens the full suggestion set immediately, rather than leaving an empty field with
+    // nothing to pick until the pilot types something first.
+    expect(find.text('Louis'), findsOneWidget);
+  });
+
+  testWidgets(
       'no matches offers to create a new pilot with the typed name',
       (tester) async {
     PilotSummary? selected;
@@ -117,6 +141,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 350));
 
     expect(find.text('Create pilot "Amy"'), findsOneWidget);
+    expect(find.text('No matches - create a new pilot below'), findsOneWidget);
 
     await tester.tap(find.text('Create pilot "Amy"'));
     await tester.pump();
