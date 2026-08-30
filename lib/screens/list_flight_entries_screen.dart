@@ -113,7 +113,8 @@ class _ListFlightEntriesScreenState extends State<ListFlightEntriesScreen> {
       itemBuilder: (context, index) {
         final entry = _entries[index];
         return ListTile(
-          title: Text('${entry.departurePlace} → ${entry.arrivalPlace}'),
+          title:
+              Text('${entry.departureAirfieldId} → ${entry.arrivalAirfieldId}'),
           subtitle: Text(formatDate(entry.date)),
           trailing: Text(formatMinutes(entry.totalMinutes)),
           onTap: () => _openEntry(entry),

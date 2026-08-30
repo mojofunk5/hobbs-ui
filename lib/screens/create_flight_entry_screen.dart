@@ -20,11 +20,11 @@ import 'view_flight_entry_screen.dart';
 /// (see docs/plans/pilot-picker.md); aircraft is picked via [AircraftPicker] against
 /// GET /aircraft?search= (see docs/plans/aircraft-picker.md); departure/arrival places are picked
 /// via [AirfieldPicker] against GET /airfield?search= (see docs/plans/airfield-picker.md, chunk 6).
-/// The backend still requires the legacy free-text departurePlace/arrivalPlace strings alongside
-/// the new optional departureAirfieldId/arrivalAirfieldId (an expand-only step, no contract yet -
-/// see FlightEntry.java's Javadoc in the backend), so this screen derives the free-text value from
-/// the picked Airfield's displayLabel-style icaoCode-or-name rather than accepting typed text
-/// directly - a pilot can no longer type an arbitrary place, only pick one of the seeded airfields.
+/// The legacy free-text departurePlace/arrivalPlace fields have been dropped from the backend
+/// contract entirely - departureAirfieldId/arrivalAirfieldId are now required, mirroring how
+/// aircraftId/pilotInCommandId already work - so this screen just passes the picked [Airfield]'s
+/// id straight through to [FlightApi.createFlightEntry]; a pilot can no longer type an arbitrary
+/// place, only pick one of the seeded airfields.
 class CreateFlightEntryScreen extends StatefulWidget {
   const CreateFlightEntryScreen(
       {super.key, required this.session, this.httpClient});
@@ -160,13 +160,6 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
     ),
   ];
 
-  /// The backend still requires the legacy free-text departurePlace/arrivalPlace strings alongside
-  /// the new optional airfield ids (expand-only, no contract yet) - derived from the picked
-  /// Airfield's icaoCode, falling back to its name for the handful of GB strips with no ICAO code
-  /// (same fallback as Airfield.displayLabel, minus the "code - name" pairing that's only wanted
-  /// for on-screen display).
-  String _placeFor(Airfield airfield) => airfield.icaoCode ?? airfield.name;
-
   Future<void> _submit() async {
     final formValid = _formKey.currentState!.validate();
     final picMissing = _pilotInCommand == null;
@@ -195,9 +188,7 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
         sessionId: widget.session.sessionId,
         aircraftId: _aircraft!.id,
         date: _date,
-        departurePlace: _placeFor(_departureAirfield!),
         departureTime: _combine(_departureTime),
-        arrivalPlace: _placeFor(_arrivalAirfield!),
         arrivalTime: _combine(_arrivalTime),
         departureAirfieldId: _departureAirfield!.id,
         arrivalAirfieldId: _arrivalAirfield!.id,
