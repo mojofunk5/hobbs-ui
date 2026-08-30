@@ -86,6 +86,10 @@ class _AircraftPickerState extends State<AircraftPicker> {
       });
       return;
     }
+    // Shown from the keystroke itself, not from when the debounced search actually starts - a
+    // 300ms window with zero feedback read as "did this even register?" to a real user, even
+    // though it was only ever a debounce, not a hang.
+    setState(() => _searching = true);
     _debounce = Timer(_debounceDelay, () => _search(query));
   }
 

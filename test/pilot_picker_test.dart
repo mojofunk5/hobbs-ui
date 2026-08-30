@@ -61,6 +61,24 @@ void main() {
     expect(find.text('Louis'), findsOneWidget);
   });
 
+  testWidgets(
+      'shows the searching indicator from the keystroke, not just once the debounced search starts',
+      (tester) async {
+    final client = MockClient((request) async =>
+        http.Response('[{"id":"pilot-2","name":"Louis"}]', 200));
+
+    await pumpPicker(tester, client: client, onChanged: (_) {});
+    await tester.tap(find.byType(TextField));
+    await tester.pumpAndSettle();
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    await tester.enterText(find.byType(TextField), 'lou');
+    await tester.pump();
+    // Still within the debounce window - no request has fired yet, but the spinner should
+    // already be visible so typing doesn't look like it did nothing.
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+  });
+
   testWidgets('selecting a suggestion calls onChanged and fills the field',
       (tester) async {
     PilotSummary? selected;

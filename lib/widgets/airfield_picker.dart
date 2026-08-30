@@ -86,6 +86,10 @@ class _AirfieldPickerState extends State<AirfieldPicker> {
       setState(() => _selected = null);
       widget.onChanged(null);
     }
+    // Shown from the keystroke itself, not from when the debounced search actually starts - a
+    // 300ms window with zero feedback read as "did this even register?" to a real user, even
+    // though it was only ever a debounce, not a hang.
+    setState(() => _searching = true);
     _debounce?.cancel();
     _debounce = Timer(_debounceDelay, () => _search(value.trim()));
   }
