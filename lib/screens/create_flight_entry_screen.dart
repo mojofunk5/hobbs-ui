@@ -116,6 +116,40 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
   int _intOr0(TextEditingController controller) =>
       int.tryParse(controller.text.trim()) ?? 0;
 
+  /// The paired-minutes rows shown before the cross-country field, declared once instead of
+  /// hand-written per row.
+  late final _minutesFieldPairsBeforeCrossCountry = [
+    (
+      _singleEngineMinutesController,
+      'Single-engine',
+      _multiEngineMinutesController,
+      'Multi-engine'
+    ),
+    (_nightMinutesController, 'Night', _ifrMinutesController, 'IFR'),
+  ];
+
+  /// The paired-minutes rows shown after the cross-country field.
+  late final _minutesFieldPairsAfterCrossCountry = [
+    (
+      _pilotInCommandMinutesController,
+      'PIC minutes (this logbook)',
+      _coPilotMinutesController,
+      'Co-pilot minutes'
+    ),
+    (
+      _dualMinutesController,
+      'Dual',
+      _instructorMinutesController,
+      'Instructor'
+    ),
+    (
+      _dayLandingsController,
+      'Day landings',
+      _nightLandingsController,
+      'Night landings'
+    ),
+  ];
+
   Future<void> _submit() async {
     final formValid = _formKey.currentState!.validate();
     final picMissing = _pilotInCommand == null;
@@ -173,37 +207,10 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
   @override
   Widget build(BuildContext context) {
     if (_created != null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Flight logged')),
-        body: ResponsivePage(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(Icons.check_circle, size: 64, color: Colors.green),
-              const SizedBox(height: 16),
-              const Text('Flight entry saved.'),
-              const SizedBox(height: 8),
-              SelectableText('Entry id: ${_created!.id}'),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: () =>
-                    Navigator.of(context).pushReplacement(MaterialPageRoute(
-                        builder: (_) => ViewFlightEntryScreen(
-                              session: widget.session,
-                              initialFlightEntryId: _created!.id,
-                              httpClient: widget.httpClient,
-                            ))),
-                child: const Text('View it'),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton(
-                onPressed: () => Navigator.of(context).pop(_created),
-                child: const Text('Done'),
-              ),
-            ],
-          ),
-        ),
+      return _FlightEntrySavedView(
+        session: widget.session,
+        httpClient: widget.httpClient,
+        created: _created!,
       );
     }
 
@@ -293,48 +300,23 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
                   },
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _singleEngineMinutesController,
-                        decoration:
-                            const InputDecoration(labelText: 'Single-engine'),
-                        keyboardType: TextInputType.number,
+                for (final (aController, aLabel, bController, bLabel)
+                    in _minutesFieldPairsBeforeCrossCountry) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _MinutesField(
+                            controller: aController, label: aLabel),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _multiEngineMinutesController,
-                        decoration:
-                            const InputDecoration(labelText: 'Multi-engine'),
-                        keyboardType: TextInputType.number,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _MinutesField(
+                            controller: bController, label: bLabel),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _nightMinutesController,
-                        decoration: const InputDecoration(labelText: 'Night'),
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _ifrMinutesController,
-                        decoration: const InputDecoration(labelText: 'IFR'),
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 TextFormField(
                   controller: _crossCountryMinutesController,
                   decoration:
@@ -342,71 +324,23 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _pilotInCommandMinutesController,
-                        decoration: const InputDecoration(
-                            labelText: 'PIC minutes (this logbook)'),
-                        keyboardType: TextInputType.number,
+                for (final (aController, aLabel, bController, bLabel)
+                    in _minutesFieldPairsAfterCrossCountry) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _MinutesField(
+                            controller: aController, label: aLabel),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _coPilotMinutesController,
-                        decoration: const InputDecoration(
-                            labelText: 'Co-pilot minutes'),
-                        keyboardType: TextInputType.number,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _MinutesField(
+                            controller: bController, label: bLabel),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _dualMinutesController,
-                        decoration: const InputDecoration(labelText: 'Dual'),
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _instructorMinutesController,
-                        decoration:
-                            const InputDecoration(labelText: 'Instructor'),
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _dayLandingsController,
-                        decoration:
-                            const InputDecoration(labelText: 'Day landings'),
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _nightLandingsController,
-                        decoration:
-                            const InputDecoration(labelText: 'Night landings'),
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 TextFormField(
                   controller: _remarksController,
                   decoration:
@@ -437,4 +371,69 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
       ),
     );
   }
+}
+
+/// A labelled numeric minutes field, with no dependency on the enclosing [State] - keeps
+/// promoting it to `lib/widgets/` a mechanical move once the edit-flight-entry screen's shape is
+/// known (see docs/plans/split-create-flight-entry-screen.md).
+class _MinutesField extends StatelessWidget {
+  const _MinutesField({required this.controller, required this.label});
+
+  final TextEditingController controller;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => TextFormField(
+        controller: controller,
+        decoration: InputDecoration(labelText: label),
+        keyboardType: TextInputType.number,
+      );
+}
+
+/// The post-submit "Flight logged" confirmation, shown in place of the form once an entry has
+/// been created.
+class _FlightEntrySavedView extends StatelessWidget {
+  const _FlightEntrySavedView({
+    required this.session,
+    required this.httpClient,
+    required this.created,
+  });
+
+  final Session session;
+  final http.Client? httpClient;
+  final FlightEntry created;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Flight logged')),
+        body: ResponsivePage(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Icon(Icons.check_circle, size: 64, color: Colors.green),
+              const SizedBox(height: 16),
+              const Text('Flight entry saved.'),
+              const SizedBox(height: 8),
+              SelectableText('Entry id: ${created.id}'),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: () =>
+                    Navigator.of(context).pushReplacement(MaterialPageRoute(
+                        builder: (_) => ViewFlightEntryScreen(
+                              session: session,
+                              initialFlightEntryId: created.id,
+                              httpClient: httpClient,
+                            ))),
+                child: const Text('View it'),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: () => Navigator.of(context).pop(created),
+                child: const Text('Done'),
+              ),
+            ],
+          ),
+        ),
+      );
 }
