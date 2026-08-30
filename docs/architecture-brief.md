@@ -188,3 +188,5 @@ In rough priority order:
 5. **GPS-recording-to-logbook.** Start a recording, derive a draft `FlightEntry` from the track on
    completion - the MVP-completing feature. Depends on the iOS app existing first (background
    location needs a real mobile platform, not a web tab).
+6. **Split up `CreateFlightEntryScreen`.** At 440 lines it's the largest file in the app - designed,
+   not yet implemented, see [`docs/plans/split-create-flight-entry-screen.md`](plans/split-create-flight-entry-screen.md).
