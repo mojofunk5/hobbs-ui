@@ -13,13 +13,20 @@ import 'api_exception.dart';
 /// "everything". This wrapper doesn't re-validate that - callers (AircraftPicker/BrowseAircraftScreen)
 /// are responsible for not calling it below that length.
 class AircraftApi {
+  /// [registrationOnly] mirrors the backend's own query param - AircraftPicker (flight-entry
+  /// form) passes true, since a pilot who already knows the tail number doesn't want incidental
+  /// hits on a make/model substring; BrowseAircraftScreen leaves it false for its broader
+  /// discovery search.
   static Future<List<Aircraft>> search({
     required String sessionId,
     required String query,
+    bool registrationOnly = false,
     http.Client? client,
   }) async {
-    final uri =
-        Uri.parse('$apiBase/aircraft').replace(queryParameters: {'search': query});
+    final uri = Uri.parse('$apiBase/aircraft').replace(queryParameters: {
+      'search': query,
+      if (registrationOnly) 'registrationOnly': 'true',
+    });
     final response = await (client ?? http.Client()).get(
       uri,
       headers: {'Authorization': 'Bearer $sessionId'},
