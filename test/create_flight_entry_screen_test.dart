@@ -15,13 +15,19 @@ void main() {
   );
 
   // The PilotPicker fields (PIC/co-pilot) issue GET /pilot?search= calls of their own (an initial
-  // one on focus, plus one per debounced keystroke) - route those to an empty list so they don't
-  // interfere with assertions about the FlightApi.createFlightEntry request itself.
+  // one on focus, plus one per debounced keystroke), and AircraftPicker issues GET /aircraft?search=
+  // - route both to a canned aircraft so they don't interfere with assertions about the
+  // FlightApi.createFlightEntry request itself.
   http.Client wrapClient(
       Future<http.Response> Function(http.Request) onCreateFlightEntry) {
     return MockClient((request) async {
       if (request.url.path.endsWith('/pilot')) {
         return http.Response('[]', 200);
+      }
+      if (request.url.path.endsWith('/aircraft')) {
+        return http.Response(
+            '[{"id":"aircraft-1","registration":"G-ABCD","make":"Cessna","model":"152"}]',
+            200);
       }
       return onCreateFlightEntry(request);
     });
@@ -33,12 +39,21 @@ void main() {
     ));
   }
 
+  Future<void> pickAircraft(WidgetTester tester) async {
+    final field = find.descendant(
+        of: find.byKey(const Key('aircraftPicker')), matching: find.byType(TextField));
+    await tester.enterText(field, 'G-ABCD');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.tap(find.text('G-ABCD - Cessna 152'));
+    await tester.pump();
+  }
+
   Future<void> fillRequiredFields(WidgetTester tester) async {
-    await tester.enterText(find.byType(TextFormField).at(0), 'aircraft-1');
-    await tester.enterText(find.byType(TextFormField).at(1), 'EGCM');
-    await tester.enterText(find.byType(TextFormField).at(2), 'EGCC');
+    await pickAircraft(tester);
+    await tester.enterText(find.byType(TextFormField).at(0), 'EGCM');
+    await tester.enterText(find.byType(TextFormField).at(1), 'EGCC');
     // Pilot in command defaults to the caller (William) - already set, nothing to fill in here.
-    await tester.enterText(find.byType(TextFormField).at(3), '45');
+    await tester.enterText(find.byType(TextFormField).at(2), '45');
   }
 
   testWidgets('does not submit when required fields are empty', (tester) async {
@@ -77,6 +92,14 @@ void main() {
   testWidgets('submitting the form saves the entry and shows its id',
       (tester) async {
     final client = MockClient((request) async {
+      if (request.url.path.endsWith('/pilot')) {
+        return http.Response('[]', 200);
+      }
+      if (request.url.path.endsWith('/aircraft')) {
+        return http.Response(
+            '[{"id":"aircraft-1","registration":"G-ABCD","make":"Cessna","model":"152"}]',
+            200);
+      }
       return http.Response(
           '{'
           '"id":"entry-1",'
@@ -117,7 +140,7 @@ void main() {
   });
 
   testWidgets('shows an error on a 400 response', (tester) async {
-    final client = MockClient((request) async => http.Response('', 400));
+    final client = wrapClient((request) async => http.Response('', 400));
 
     await pumpScreen(tester, client: client);
     await fillRequiredFields(tester);

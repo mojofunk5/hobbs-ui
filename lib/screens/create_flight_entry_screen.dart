@@ -4,17 +4,19 @@ import 'package:http/http.dart' as http;
 import '../api/api_exception.dart';
 import '../api/flight_api.dart';
 import '../format.dart';
+import '../models/aircraft.dart';
 import '../models/flight_entry.dart';
 import '../models/pilot_summary.dart';
 import '../models/session.dart';
+import '../widgets/aircraft_picker.dart';
 import '../widgets/pilot_picker.dart';
 import '../widgets/responsive_page.dart';
 import 'view_flight_entry_screen.dart';
 
 /// The CAP804/FCL.050 logbook entry form - see docs/plans/logbook-entries.md (chunk 2) in the
 /// hobbs repo. Pilot in command/co-pilot are picked via [PilotPicker] against GET /pilot?search=
-/// (see docs/plans/pilot-picker.md); aircraftId is still a plain pasted-in id for now - that
-/// picker is a separate, not-yet-designed story (see CLAUDE.md's Open work).
+/// (see docs/plans/pilot-picker.md); aircraft is picked via [AircraftPicker] against
+/// GET /aircraft?search= (see docs/plans/aircraft-picker.md).
 class CreateFlightEntryScreen extends StatefulWidget {
   const CreateFlightEntryScreen(
       {super.key, required this.session, this.httpClient});
@@ -32,7 +34,6 @@ class CreateFlightEntryScreen extends StatefulWidget {
 class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  final _aircraftIdController = TextEditingController();
   final _departurePlaceController = TextEditingController();
   final _arrivalPlaceController = TextEditingController();
   final _singleEngineMinutesController = TextEditingController(text: '0');
@@ -59,6 +60,8 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
       PilotSummary(id: widget.session.pilotId, name: widget.session.name);
   PilotSummary? _coPilot;
   String? _pilotInCommandError;
+  Aircraft? _aircraft;
+  String? _aircraftError;
 
   bool _submitting = false;
   String? _error;
@@ -66,7 +69,6 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
 
   @override
   void dispose() {
-    _aircraftIdController.dispose();
     _departurePlaceController.dispose();
     _arrivalPlaceController.dispose();
     _singleEngineMinutesController.dispose();
@@ -153,8 +155,12 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
   Future<void> _submit() async {
     final formValid = _formKey.currentState!.validate();
     final picMissing = _pilotInCommand == null;
-    setState(() => _pilotInCommandError = picMissing ? 'Required' : null);
-    if (!formValid || picMissing) return;
+    final aircraftMissing = _aircraft == null;
+    setState(() {
+      _pilotInCommandError = picMissing ? 'Required' : null;
+      _aircraftError = aircraftMissing ? 'Required' : null;
+    });
+    if (!formValid || picMissing || aircraftMissing) return;
     setState(() {
       _submitting = true;
       _error = null;
@@ -162,7 +168,7 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
     try {
       final created = await FlightApi.createFlightEntry(
         sessionId: widget.session.sessionId,
-        aircraftId: _aircraftIdController.text.trim(),
+        aircraftId: _aircraft!.id,
         date: _date,
         departurePlace: _departurePlaceController.text.trim(),
         departureTime: _combine(_departureTime),
@@ -223,11 +229,16 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextFormField(
-                  controller: _aircraftIdController,
-                  decoration: const InputDecoration(labelText: 'Aircraft id'),
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Required' : null,
+                AircraftPicker(
+                  key: const Key('aircraftPicker'),
+                  sessionId: widget.session.sessionId,
+                  label: 'Aircraft',
+                  errorText: _aircraftError,
+                  httpClient: widget.httpClient,
+                  onChanged: (aircraft) => setState(() {
+                    _aircraft = aircraft;
+                    if (aircraft != null) _aircraftError = null;
+                  }),
                 ),
                 const SizedBox(height: 12),
                 ListTile(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/session.dart';
 import '../session_store.dart';
 import '../widgets/responsive_page.dart';
+import 'browse_aircraft_screen.dart';
 import 'create_flight_entry_screen.dart';
 import 'list_flight_entries_screen.dart';
 import 'view_flight_entry_screen.dart';
@@ -56,6 +57,12 @@ class SignedInScreen extends StatelessWidget {
               onPressed: () => Navigator.of(context).push(MaterialPageRoute(
                   builder: (_) => ViewFlightEntryScreen(session: session))),
               child: const Text('View a flight by id'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => BrowseAircraftScreen(session: session))),
+              child: const Text('Browse aircraft'),
             ),
             const SizedBox(height: 12),
             OutlinedButton(
