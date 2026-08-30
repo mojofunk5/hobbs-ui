@@ -69,3 +69,15 @@ A non-obvious architecture choice (a tradeoff weighed, an alternative considered
 something that departs from an established pattern) gets a dated `### Decision` entry in
 `docs/architecture-brief.md`'s Decisions section - see that file for the existing entries and format.
 Never delete a decision entry; a later one that supersedes an earlier choice says so explicitly.
+
+## 11. Design in a Doc PR First, Implement in a New Session
+
+For non-trivial work, don't go straight from "present a plan" (rule 3) into writing the code in the
+same conversation. Instead: the plan becomes its own doc PR (in the sibling `hobbs` repo's
+`docs/plans/`, or `docs/architecture-brief.md` here, depending which repo the work is in) that Andy
+reviews and merges on its own. Implementation then starts as a **new session** against the merged
+doc, not a continuation of the planning conversation - the doc must carry the full context forward
+(decisions made and why, trade-offs weighed, what's explicitly out of scope) so an implementation
+session only has to read it, not have the planning conversation replayed into it. Keeps planning free
+to explore without burning implementation budget, and keeps each implementation session small and
+focused on exactly what the doc says to build.
