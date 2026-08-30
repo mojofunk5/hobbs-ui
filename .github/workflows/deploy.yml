@@ -20,7 +20,12 @@ jobs:
 
       - run: flutter test
 
-      - run: flutter build web --release
+      # --no-wasm-dry-run skips an advisory wasm-compatibility check that runs alongside the real
+      # JS compile even though this build never ships wasm (no --wasm flag) - verified locally that
+      # main.dart.js comes out byte-for-byte identical with or without it; only flutter_bootstrap.js's
+      # informational build-target list changes (one inert placeholder entry for the skipped wasm
+      # target). ~38s -> ~26s locally (~33% faster) for zero output difference.
+      - run: flutter build web --release --no-wasm-dry-run
 
       - uses: actions/upload-artifact@v7
         with:
