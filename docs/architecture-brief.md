@@ -119,6 +119,19 @@ a reload. Would need real named routes to fix properly - not worth it for one sc
 Reverse-chronological. Never delete an entry - a later decision that supersedes an earlier one says
 so explicitly.
 
+### Decision (2026-08-30): docs-only commits skip `build` via a conditional job, not a trigger-level path filter
+`build.yml` originally considered a trigger-level `paths-ignore` to skip CI for docs-only commits
+(mirroring the equivalent fix in `hobbs`'s `build.yml`) - rejected once checked against this repo's
+branch protection, which requires the `build` status check. A workflow that never triggers never
+posts *any* status, so a required check with no status gets stuck "waiting to be reported" forever
+and blocks merging - the opposite of the goal. Fixed instead with a pattern that stays safe alongside
+a required check: the workflow always triggers, an unconditional `changes` job detects a genuinely
+docs-only commit via `dorny/paths-filter` (`predicate-quantifier: every`, so a commit touching
+`README.md` alongside real code still runs the full build), and the expensive `build` job is
+conditionally skipped via `if:` based on that output - a job skipped via `if:` still reports
+"skipped", which GitHub counts as passing for a required check. Same mechanism used in `hobbs`'s
+`build.yml`.
+
 ### Decision (2026-08-29): removed the Flutter web service worker
 It was flaky (a failed registration only fell back to loading the app after a hard-coded 4-second
 timeout) and bought nothing - the web build isn't content-hashed and Caddy already serves it
