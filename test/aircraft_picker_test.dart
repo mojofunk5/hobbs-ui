@@ -41,11 +41,13 @@ void main() {
     expect(requests, 0);
   });
 
-  testWidgets('typing 2+ characters debounces and searches',
+  testWidgets('typing 2+ characters debounces and searches registration only',
       (tester) async {
     final queries = <String?>[];
+    final registrationOnlyValues = <String?>[];
     final client = MockClient((request) async {
       queries.add(request.url.queryParameters['search']);
+      registrationOnlyValues.add(request.url.queryParameters['registrationOnly']);
       return http.Response(
           '[{"id":"aircraft-1","registration":"G-ABCD","make":"Cessna","model":"152"}]', 200);
     });
@@ -58,7 +60,19 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(queries, contains('ab'));
+    expect(registrationOnlyValues, contains('true'));
     expect(find.text('G-ABCD - Cessna 152'), findsOneWidget);
+  });
+
+  testWidgets('shows a no-matches message when the search returns nothing',
+      (tester) async {
+    final client = MockClient((request) async => http.Response('[]', 200));
+
+    await pumpPicker(tester, client: client, onChanged: (_) {});
+    await tester.enterText(find.byType(TextField), 'zz');
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(find.text('No aircraft found for that registration'), findsOneWidget);
   });
 
   testWidgets('selecting a suggestion fills the field and calls onChanged',

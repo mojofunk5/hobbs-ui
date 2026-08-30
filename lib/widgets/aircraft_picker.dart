@@ -6,13 +6,17 @@ import 'package:http/http.dart' as http;
 import '../api/aircraft_api.dart';
 import '../models/aircraft.dart';
 
-/// A typeahead field for picking an aircraft against GET /aircraft?search= (see
-/// docs/plans/aircraft-picker.md in the hobbs repo) - replaces a raw pasted-in AircraftId text
+/// A typeahead field for picking an aircraft against GET /aircraft?search=&registrationOnly=true
+/// (see docs/plans/aircraft-picker.md in the hobbs repo) - replaces a raw pasted-in AircraftId text
 /// field. Deliberately simpler than PilotPicker: no "create new" option - aircraft is reference
 /// data, not pilot-submitted, so there's nothing to create inline - and no full-set dropdown on
 /// focus, since the backend requires a search of at least [minSearchLength] characters rather than
 /// defaulting to "everything" (~600k rows). See PilotPicker's own doc comment for why this is
 /// hand-rolled rather than built on Flutter's Autocomplete widget.
+///
+/// Registration-only, not make/model, unlike BrowseAircraftScreen's search - a pilot logging a
+/// flight already knows the tail number they flew, and a make/model match would surface every
+/// aircraft of that type in the (eventually ~600k-row) dataset, not just the one they want.
 ///
 /// Not itself a FormField - calls [onChanged] with the current selection (null while nothing's
 /// been picked), same contract as PilotPicker.
@@ -50,6 +54,7 @@ class _AircraftPickerState extends State<AircraftPicker> {
   Aircraft? _selected;
   List<Aircraft> _suggestions = [];
   bool _searching = false;
+  bool _searched = false;
   Timer? _debounce;
 
   @override
@@ -77,6 +82,7 @@ class _AircraftPickerState extends State<AircraftPicker> {
       setState(() {
         _suggestions = [];
         _searching = false;
+        _searched = false;
       });
       return;
     }
@@ -84,23 +90,29 @@ class _AircraftPickerState extends State<AircraftPicker> {
   }
 
   Future<void> _search(String query) async {
-    setState(() => _searching = true);
+    setState(() {
+      _searching = true;
+      _searched = false;
+    });
     try {
       final results = await AircraftApi.search(
         sessionId: widget.sessionId,
         query: query,
+        registrationOnly: true,
         client: widget.httpClient,
       );
       if (!mounted) return;
       setState(() {
         _suggestions = results;
         _searching = false;
+        _searched = true;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _suggestions = [];
         _searching = false;
+        _searched = true;
       });
     }
   }
@@ -111,12 +123,17 @@ class _AircraftPickerState extends State<AircraftPicker> {
       _controller.text = aircraft.displayLabel;
       _suggestions = [];
       _searching = false;
+      _searched = false;
     });
     widget.onChanged(aircraft);
   }
 
   @override
   Widget build(BuildContext context) {
+    final noMatches = _selected == null &&
+        _searched &&
+        !_searching &&
+        _suggestions.isEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -126,7 +143,9 @@ class _AircraftPickerState extends State<AircraftPicker> {
             labelText: widget.label,
             errorText: widget.errorText,
             helperText: _selected == null
-                ? 'Type at least ${AircraftPicker.minSearchLength} characters of the registration, make or model'
+                ? (noMatches
+                    ? 'No aircraft found for that registration'
+                    : 'Type at least ${AircraftPicker.minSearchLength} characters of the registration')
                 : null,
             suffixIcon: _searching
                 ? const Padding(
