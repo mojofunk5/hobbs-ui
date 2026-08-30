@@ -62,7 +62,51 @@ jobs:
 
       - run: flutter analyze
 
-      - run: flutter test
+      - run: flutter test --coverage
+
+      - name: Install lcov
+        run: sudo apt-get update -y && sudo apt-get install -y lcov
+
+      - name: Generate HTML coverage report
+        run: genhtml coverage/lcov.info -o coverage/html
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v7
+        with:
+          name: lcov-coverage-report
+          path: coverage/html
+
+      # badge-maker is shields.io's own badge-rendering library (published on npm, MIT) - used
+      # directly via npx rather than a third-party wrapper Action, so there's no extra unreviewed
+      # code in the supply chain beyond the tool shields.io itself uses. There's no first-party lcov
+      # equivalent of hobbs's cicirello/jacoco-badge-generator, so this reads the percentage out of
+      # lcov's own --summary output instead.
+      - name: Generate coverage badge
+        if: github.ref == 'refs/heads/master'
+        run: |
+          PCT=$(lcov --summary coverage/lcov.info 2>&1 | grep -oP 'lines\.*: \K[0-9.]+')
+          COLOR=$(awk -v p="$PCT" 'BEGIN { if (p >= 80) print "#4c1"; else if (p >= 60) print "#dfb317"; else print "#e05d44" }')
+          mkdir -p .github/badges
+          npx --yes badge-maker "coverage" "${PCT}%" "$COLOR" > .github/badges/coverage.svg
+
+      # Same racy-merge reasoning as hobbs's build.yml: two merges landing on master close together
+      # race here, so retry with a rebase+push loop, and continue-on-error since a stale badge is
+      # cosmetic and must never block deploy (which needs: build).
+      - name: Commit coverage badge
+        if: github.ref == 'refs/heads/master'
+        continue-on-error: true
+        run: |
+          if [[ $(git status --porcelain .github/badges) ]]; then
+            git config --global user.name 'github-actions[bot]'
+            git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+            git add .github/badges
+            git commit -m "Update coverage badge [skip ci]"
+            for i in 1 2 3; do
+              git push && break
+              git fetch origin master
+              git rebase origin/master
+            done
+          fi
 
       # --no-wasm-dry-run skips an advisory wasm-compatibility check that runs alongside the real
       # JS compile even though this build never ships wasm (no --wasm flag) - verified locally that
