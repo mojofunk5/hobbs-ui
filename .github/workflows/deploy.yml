@@ -3,7 +3,34 @@ name: Build and Deploy
 on: push
 
 jobs:
+  # Always runs (no trigger-level path filter) - deliberately, so this workflow always reports a
+  # status for every commit. A trigger-level paths-ignore looks equivalent but isn't: this repo's
+  # branch protection requires the "build" check (see docs/ai-working-agreement.md), and if the whole
+  # workflow never triggers, no status is ever posted for that check - GitHub leaves it stuck
+  # "waiting to be reported" forever and blocks merging. A *job* that's conditionally skipped via
+  # `if:`, by contrast, still reports a "skipped" status, which GitHub counts as passing for a
+  # required check. Same pattern used in hobbs's build.yml, for consistency between the two repos.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      docs_only: ${{ steps.filter.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          # every, not the default some - only skip when ALL changed files are docs. A commit that
+          # touches README.md/docs/architecture-brief.md alongside real code must still run the full
+          # build.
+          predicate-quantifier: every
+          filters: |
+            docs_only:
+              - '**/*.md'
+              - 'docs/**'
+
   build:
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
 
     steps:
