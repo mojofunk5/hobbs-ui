@@ -86,7 +86,8 @@ void main() {
     await tester.enterText(find.byType(TextField), 'zz');
     await tester.pump(const Duration(milliseconds: 350));
 
-    expect(find.text('No aircraft found for that registration'), findsOneWidget);
+    expect(find.text('No aircraft found - check the registration and try again'),
+        findsOneWidget);
   });
 
   testWidgets('selecting a suggestion fills the field and calls onChanged',
@@ -103,7 +104,27 @@ void main() {
 
     expect(selected?.id, 'aircraft-1');
     expect(find.text('G-ABCD - Cessna 152'), findsOneWidget);
-    expect(find.byIcon(Icons.check_circle), findsOneWidget);
+    expect(find.byIcon(Icons.cancel), findsOneWidget);
+  });
+
+  testWidgets('tapping the clear icon removes the selection and refocuses',
+      (tester) async {
+    Aircraft? selected;
+    final client = MockClient((request) async => http.Response(
+        '[{"id":"aircraft-1","registration":"G-ABCD","make":"Cessna","model":"152"}]', 200));
+
+    await pumpPicker(tester, client: client, onChanged: (a) => selected = a);
+    await tester.enterText(find.byType(TextField), 'ab');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.tap(find.text('G-ABCD - Cessna 152'));
+    await tester.pump();
+
+    await tester.tap(find.byIcon(Icons.cancel));
+    await tester.pump();
+
+    expect(selected, isNull);
+    expect(find.widgetWithText(TextField, 'G-ABCD - Cessna 152'), findsNothing);
+    expect(find.byIcon(Icons.cancel), findsNothing);
   });
 
   testWidgets('editing the text after a selection clears it', (tester) async {

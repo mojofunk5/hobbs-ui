@@ -128,6 +128,34 @@ void main() {
   });
 
   testWidgets(
+      'tapping the clear icon removes the selection and reopens the suggestion list',
+      (tester) async {
+    Airfield? selected;
+    final client = MockClient((request) async => http.Response(
+        '[{"id":"airfield-1","icaoCode":"EGCJ","name":"Sherburn-in-Elmet Airfield",'
+        '"municipality":"Sherburn-in-Elmet","isoCountry":"GB","isoRegion":"GB-ENG",'
+        '"latitude":53.79,"longitude":-1.23,"elevationFt":20,"type":"small_airport"}]',
+        200));
+
+    await pumpPicker(tester, client: client,
+        onChanged: (airfield) => selected = airfield);
+    await tester.tap(find.byType(TextField));
+    await tester.pump();
+    await tester.tap(find.text('EGCJ - Sherburn-in-Elmet Airfield'));
+    await tester.pump();
+
+    await tester.tap(find.byIcon(Icons.cancel));
+    await tester.pump();
+
+    expect(selected, isNull);
+    expect(find.widgetWithText(TextField, 'EGCJ - Sherburn-in-Elmet Airfield'),
+        findsNothing);
+    // Reopens the full suggestion set immediately, rather than leaving an empty field with
+    // nothing to pick until the pilot types something first.
+    expect(find.text('EGCJ - Sherburn-in-Elmet Airfield'), findsOneWidget);
+  });
+
+  testWidgets(
       'falls back to just the name when the airfield has no icao code',
       (tester) async {
     final client = MockClient((request) async => http.Response(
@@ -167,7 +195,8 @@ void main() {
     await tester.enterText(find.byType(TextField), 'Sherbrun');
     await tester.pump(const Duration(milliseconds: 350));
 
-    expect(find.text('No airfields found'), findsOneWidget);
+    expect(find.text('No airfields found - check the spelling and try again'),
+        findsOneWidget);
   });
 
   testWidgets('editing the text clears a prior selection until a new pick',

@@ -50,6 +50,7 @@ class _AircraftPickerState extends State<AircraftPicker> {
   static const _debounceDelay = Duration(milliseconds: 300);
 
   late final TextEditingController _controller;
+  final _focusNode = FocusNode();
 
   Aircraft? _selected;
   List<Aircraft> _suggestions = [];
@@ -67,6 +68,7 @@ class _AircraftPickerState extends State<AircraftPicker> {
   @override
   void dispose() {
     _debounce?.cancel();
+    _focusNode.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -132,6 +134,24 @@ class _AircraftPickerState extends State<AircraftPicker> {
     widget.onChanged(aircraft);
   }
 
+  /// Lets a pilot pick a different aircraft without first deleting the current selection's text
+  /// by hand - previously the only way back into search was to select-all-and-retype, with no
+  /// visible sign a selection even existed beyond a small green checkmark. Unlike PilotPicker/
+  /// AirfieldPicker, doesn't re-search immediately afterwards - this picker requires
+  /// [AircraftPicker.minSearchLength] characters before it searches at all, so there'd be nothing
+  /// to show yet regardless.
+  void _clear() {
+    setState(() {
+      _selected = null;
+      _controller.clear();
+      _suggestions = [];
+      _searching = false;
+      _searched = false;
+    });
+    widget.onChanged(null);
+    _focusNode.requestFocus();
+  }
+
   @override
   Widget build(BuildContext context) {
     final noMatches = _selected == null &&
@@ -143,12 +163,13 @@ class _AircraftPickerState extends State<AircraftPicker> {
       children: [
         TextField(
           controller: _controller,
+          focusNode: _focusNode,
           decoration: InputDecoration(
             labelText: widget.label,
             errorText: widget.errorText,
             helperText: _selected == null
                 ? (noMatches
-                    ? 'No aircraft found for that registration'
+                    ? 'No aircraft found - check the registration and try again'
                     : 'Type at least ${AircraftPicker.minSearchLength} characters of the registration')
                 : null,
             suffixIcon: _searching
@@ -161,7 +182,11 @@ class _AircraftPickerState extends State<AircraftPicker> {
                     ),
                   )
                 : _selected != null
-                    ? const Icon(Icons.check_circle, color: Colors.green)
+                    ? IconButton(
+                        icon: const Icon(Icons.cancel, color: Colors.green),
+                        tooltip: 'Clear',
+                        onPressed: _clear,
+                      )
                     : null,
           ),
           onChanged: _onTextChanged,
