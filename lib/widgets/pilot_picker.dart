@@ -116,6 +116,7 @@ class _PilotPickerState extends State<PilotPicker> {
       _selected = pilot;
       _controller.text = pilot.name;
       _suggestions = [];
+      _searching = false;
     });
     widget.onChanged(pilot);
   }

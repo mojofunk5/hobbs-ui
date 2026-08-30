@@ -105,6 +105,8 @@ void main() {
 
     expect(selected, const PilotSummary(id: 'pilot-3', name: 'Amy'));
     expect(find.widgetWithText(TextField, 'Amy'), findsOneWidget);
+    // Regression: _createNew used to leave _searching stuck true, spinning forever.
+    expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 
   testWidgets('starts pre-filled with an initial value', (tester) async {
