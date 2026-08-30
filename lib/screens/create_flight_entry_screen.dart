@@ -5,10 +5,12 @@ import '../api/api_exception.dart';
 import '../api/flight_api.dart';
 import '../format.dart';
 import '../models/aircraft.dart';
+import '../models/airfield.dart';
 import '../models/flight_entry.dart';
 import '../models/pilot_summary.dart';
 import '../models/session.dart';
 import '../widgets/aircraft_picker.dart';
+import '../widgets/airfield_picker.dart';
 import '../widgets/pilot_picker.dart';
 import '../widgets/responsive_page.dart';
 import 'view_flight_entry_screen.dart';
@@ -16,7 +18,13 @@ import 'view_flight_entry_screen.dart';
 /// The CAP804/FCL.050 logbook entry form - see docs/plans/logbook-entries.md (chunk 2) in the
 /// hobbs repo. Pilot in command/co-pilot are picked via [PilotPicker] against GET /pilot?search=
 /// (see docs/plans/pilot-picker.md); aircraft is picked via [AircraftPicker] against
-/// GET /aircraft?search= (see docs/plans/aircraft-picker.md).
+/// GET /aircraft?search= (see docs/plans/aircraft-picker.md); departure/arrival places are picked
+/// via [AirfieldPicker] against GET /airfield?search= (see docs/plans/airfield-picker.md, chunk 6).
+/// The legacy free-text departurePlace/arrivalPlace fields have been dropped from the backend
+/// contract entirely - departureAirfieldId/arrivalAirfieldId are now required, mirroring how
+/// aircraftId/pilotInCommandId already work - so this screen just passes the picked [Airfield]'s
+/// id straight through to [FlightApi.createFlightEntry]; a pilot can no longer type an arbitrary
+/// place, only pick one of the seeded airfields.
 class CreateFlightEntryScreen extends StatefulWidget {
   const CreateFlightEntryScreen(
       {super.key, required this.session, this.httpClient});
@@ -34,8 +42,6 @@ class CreateFlightEntryScreen extends StatefulWidget {
 class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  final _departurePlaceController = TextEditingController();
-  final _arrivalPlaceController = TextEditingController();
   final _singleEngineMinutesController = TextEditingController(text: '0');
   final _multiEngineMinutesController = TextEditingController(text: '0');
   final _totalMinutesController = TextEditingController();
@@ -62,6 +68,10 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
   String? _pilotInCommandError;
   Aircraft? _aircraft;
   String? _aircraftError;
+  Airfield? _departureAirfield;
+  String? _departureAirfieldError;
+  Airfield? _arrivalAirfield;
+  String? _arrivalAirfieldError;
 
   bool _submitting = false;
   String? _error;
@@ -69,8 +79,6 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
 
   @override
   void dispose() {
-    _departurePlaceController.dispose();
-    _arrivalPlaceController.dispose();
     _singleEngineMinutesController.dispose();
     _multiEngineMinutesController.dispose();
     _totalMinutesController.dispose();
@@ -156,11 +164,21 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
     final formValid = _formKey.currentState!.validate();
     final picMissing = _pilotInCommand == null;
     final aircraftMissing = _aircraft == null;
+    final departureAirfieldMissing = _departureAirfield == null;
+    final arrivalAirfieldMissing = _arrivalAirfield == null;
     setState(() {
       _pilotInCommandError = picMissing ? 'Required' : null;
       _aircraftError = aircraftMissing ? 'Required' : null;
+      _departureAirfieldError = departureAirfieldMissing ? 'Required' : null;
+      _arrivalAirfieldError = arrivalAirfieldMissing ? 'Required' : null;
     });
-    if (!formValid || picMissing || aircraftMissing) return;
+    if (!formValid ||
+        picMissing ||
+        aircraftMissing ||
+        departureAirfieldMissing ||
+        arrivalAirfieldMissing) {
+      return;
+    }
     setState(() {
       _submitting = true;
       _error = null;
@@ -170,10 +188,10 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
         sessionId: widget.session.sessionId,
         aircraftId: _aircraft!.id,
         date: _date,
-        departurePlace: _departurePlaceController.text.trim(),
         departureTime: _combine(_departureTime),
-        arrivalPlace: _arrivalPlaceController.text.trim(),
         arrivalTime: _combine(_arrivalTime),
+        departureAirfieldId: _departureAirfield!.id,
+        arrivalAirfieldId: _arrivalAirfield!.id,
         pilotInCommandId: _pilotInCommand!.id,
         coPilotId: _coPilot?.id,
         singleEngineMinutes: _intOr0(_singleEngineMinutesController),
@@ -248,13 +266,16 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
                   onTap: _pickDate,
                 ),
                 const SizedBox(height: 12),
-                TextFormField(
-                  controller: _departurePlaceController,
-                  decoration:
-                      const InputDecoration(labelText: 'Departure place'),
-                  textCapitalization: TextCapitalization.characters,
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Required' : null,
+                AirfieldPicker(
+                  key: const Key('departureAirfieldPicker'),
+                  sessionId: widget.session.sessionId,
+                  label: 'Departure place',
+                  errorText: _departureAirfieldError,
+                  httpClient: widget.httpClient,
+                  onChanged: (airfield) => setState(() {
+                    _departureAirfield = airfield;
+                    if (airfield != null) _departureAirfieldError = null;
+                  }),
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
@@ -264,12 +285,16 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
                   onTap: () => _pickTime(true),
                 ),
                 const SizedBox(height: 12),
-                TextFormField(
-                  controller: _arrivalPlaceController,
-                  decoration: const InputDecoration(labelText: 'Arrival place'),
-                  textCapitalization: TextCapitalization.characters,
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Required' : null,
+                AirfieldPicker(
+                  key: const Key('arrivalAirfieldPicker'),
+                  sessionId: widget.session.sessionId,
+                  label: 'Arrival place',
+                  errorText: _arrivalAirfieldError,
+                  httpClient: widget.httpClient,
+                  onChanged: (airfield) => setState(() {
+                    _arrivalAirfield = airfield;
+                    if (airfield != null) _arrivalAirfieldError = null;
+                  }),
                 ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,

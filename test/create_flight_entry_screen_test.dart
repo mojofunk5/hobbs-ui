@@ -15,8 +15,9 @@ void main() {
   );
 
   // The PilotPicker fields (PIC/co-pilot) issue GET /pilot?search= calls of their own (an initial
-  // one on focus, plus one per debounced keystroke), and AircraftPicker issues GET /aircraft?search=
-  // - route both to a canned aircraft so they don't interfere with assertions about the
+  // one on focus, plus one per debounced keystroke), AircraftPicker issues GET /aircraft?search=,
+  // and the two AirfieldPicker fields issue GET /airfield?search= (also on-focus, like PilotPicker)
+  // - route all three to canned results so they don't interfere with assertions about the
   // FlightApi.createFlightEntry request itself.
   http.Client wrapClient(
       Future<http.Response> Function(http.Request) onCreateFlightEntry) {
@@ -27,6 +28,16 @@ void main() {
       if (request.url.path.endsWith('/aircraft')) {
         return http.Response(
             '[{"id":"aircraft-1","registration":"G-ABCD","make":"Cessna","model":"152"}]',
+            200);
+      }
+      if (request.url.path.endsWith('/airfield')) {
+        return http.Response(
+            '[{"id":"airfield-1","icaoCode":"EGCM","name":"Manchester Barton Aerodrome",'
+            '"municipality":"Manchester","isoCountry":"GB","isoRegion":"GB-ENG",'
+            '"latitude":53.47,"longitude":-2.38,"elevationFt":80,"type":"small_airport"},'
+            '{"id":"airfield-2","icaoCode":"EGCC","name":"Manchester Airport",'
+            '"municipality":"Manchester","isoCountry":"GB","isoRegion":"GB-ENG",'
+            '"latitude":53.35,"longitude":-2.27,"elevationFt":257,"type":"large_airport"}]',
             200);
       }
       return onCreateFlightEntry(request);
@@ -48,12 +59,23 @@ void main() {
     await tester.pump();
   }
 
+  Future<void> pickAirfield(WidgetTester tester, Key pickerKey, String label) async {
+    final field = find.descendant(
+        of: find.byKey(pickerKey), matching: find.byType(TextField));
+    await tester.tap(field);
+    await tester.pump();
+    await tester.tap(find.text(label));
+    await tester.pump();
+  }
+
   Future<void> fillRequiredFields(WidgetTester tester) async {
     await pickAircraft(tester);
-    await tester.enterText(find.byType(TextFormField).at(0), 'EGCM');
-    await tester.enterText(find.byType(TextFormField).at(1), 'EGCC');
+    await pickAirfield(tester, const Key('departureAirfieldPicker'),
+        'EGCM - Manchester Barton Aerodrome');
+    await pickAirfield(
+        tester, const Key('arrivalAirfieldPicker'), 'EGCC - Manchester Airport');
     // Pilot in command defaults to the caller (William) - already set, nothing to fill in here.
-    await tester.enterText(find.byType(TextFormField).at(2), '45');
+    await tester.enterText(find.byType(TextFormField).first, '45');
   }
 
   testWidgets('does not submit when required fields are empty', (tester) async {
@@ -100,16 +122,26 @@ void main() {
             '[{"id":"aircraft-1","registration":"G-ABCD","make":"Cessna","model":"152"}]',
             200);
       }
+      if (request.url.path.endsWith('/airfield')) {
+        return http.Response(
+            '[{"id":"airfield-1","icaoCode":"EGCM","name":"Manchester Barton Aerodrome",'
+            '"municipality":"Manchester","isoCountry":"GB","isoRegion":"GB-ENG",'
+            '"latitude":53.47,"longitude":-2.38,"elevationFt":80,"type":"small_airport"},'
+            '{"id":"airfield-2","icaoCode":"EGCC","name":"Manchester Airport",'
+            '"municipality":"Manchester","isoCountry":"GB","isoRegion":"GB-ENG",'
+            '"latitude":53.35,"longitude":-2.27,"elevationFt":257,"type":"large_airport"}]',
+            200);
+      }
       return http.Response(
           '{'
           '"id":"entry-1",'
           '"aircraftId":"aircraft-1",'
           '"flightTrackId":null,'
           '"date":"2026-08-24",'
-          '"departurePlace":"EGCM",'
           '"departureTime":"2026-08-24T10:00:00Z",'
-          '"arrivalPlace":"EGCC",'
           '"arrivalTime":"2026-08-24T10:45:00Z",'
+          '"departureAirfieldId":"airfield-1",'
+          '"arrivalAirfieldId":"airfield-2",'
           '"pilotInCommandId":"pilot-2",'
           '"coPilotId":null,'
           '"singleEngineMinutes":0,'

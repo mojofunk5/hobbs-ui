@@ -150,9 +150,9 @@ class _ViewFlightEntryScreenState extends State<ViewFlightEntryScreen> {
                     _row('Date', formatDate(entry.date)),
                     _row('Aircraft', entry.aircraftId),
                     _row('Departure',
-                        '${entry.departurePlace} ${formatTime(entry.departureTime)}'),
+                        '${entry.departureAirfieldId} ${formatTime(entry.departureTime)}'),
                     _row('Arrival',
-                        '${entry.arrivalPlace} ${formatTime(entry.arrivalTime)}'),
+                        '${entry.arrivalAirfieldId} ${formatTime(entry.arrivalTime)}'),
                     _row('Pilot in command', entry.pilotInCommandId),
                     if (entry.coPilotId != null)
                       _row('Co-pilot', entry.coPilotId!),
