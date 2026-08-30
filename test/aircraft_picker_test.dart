@@ -64,6 +64,20 @@ void main() {
     expect(find.text('G-ABCD - Cessna 152'), findsOneWidget);
   });
 
+  testWidgets(
+      'shows the searching indicator from the keystroke, not just once the debounced search starts',
+      (tester) async {
+    final client = MockClient((request) async => http.Response(
+        '[{"id":"aircraft-1","registration":"G-ABCD","make":"Cessna","model":"152"}]', 200));
+
+    await pumpPicker(tester, client: client, onChanged: (_) {});
+    await tester.enterText(find.byType(TextField), 'ab');
+    await tester.pump();
+    // Still within the debounce window - no request has fired yet, but the spinner should
+    // already be visible so typing doesn't look like it did nothing.
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+  });
+
   testWidgets('shows a no-matches message when the search returns nothing',
       (tester) async {
     final client = MockClient((request) async => http.Response('[]', 200));
