@@ -142,7 +142,8 @@ picker (or any other async-search widget added later) to as a checklist, not jus
 4. **A visible, reversible selection.** Once something was picked, the only indicator was a small
    green checkmark, and the only way to search again was to select-all-and-retype the field's text
    by hand - not obvious, and not discoverable. Fixed: the checkmark is now a tappable clear (X)
-   button (`Icons.cancel`, kept green so "you have a valid selection" is still the primary read) that
+   button (`Icons.cancel` in `Colors.lightBlue` - green read as a status/success colour rather than
+   an actionable one, light blue reads as "tap me" while still being distinct from an error state) that
    clears the field and - for `PilotPicker`/`AirfieldPicker`, which support an empty search - reopens
    the full suggestion list immediately rather than leaving an empty field with nothing to pick until
    something's typed.

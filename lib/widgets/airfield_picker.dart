@@ -182,7 +182,7 @@ class _AirfieldPickerState extends State<AirfieldPicker> {
                   )
                 : _selected != null
                     ? IconButton(
-                        icon: const Icon(Icons.cancel, color: Colors.green),
+                        icon: const Icon(Icons.cancel, color: Colors.lightBlue),
                         tooltip: 'Clear',
                         onPressed: _clear,
                       )

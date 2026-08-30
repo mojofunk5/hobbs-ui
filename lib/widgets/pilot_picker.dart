@@ -196,7 +196,7 @@ class _PilotPickerState extends State<PilotPicker> {
                   )
                 : _selected != null
                     ? IconButton(
-                        icon: const Icon(Icons.cancel, color: Colors.green),
+                        icon: const Icon(Icons.cancel, color: Colors.lightBlue),
                         tooltip: 'Clear',
                         onPressed: _clear,
                       )
