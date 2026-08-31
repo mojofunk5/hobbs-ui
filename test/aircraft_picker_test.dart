@@ -14,6 +14,7 @@ void main() {
     required http.Client client,
     required ValueChanged<Aircraft?> onChanged,
     Aircraft? initialValue,
+    List<Aircraft>? initialSuggestions,
   }) async {
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
@@ -22,6 +23,7 @@ void main() {
           label: 'Aircraft',
           httpClient: client,
           initialValue: initialValue,
+          initialSuggestions: initialSuggestions,
           onChanged: onChanged,
         ),
       ),
@@ -203,6 +205,47 @@ void main() {
     expect(selected, isNull);
     expect(find.widgetWithText(TextField, 'G-ABCD - Cessna 152'), findsNothing);
     expect(find.byIcon(Icons.cancel), findsNothing);
+  });
+
+  testWidgets(
+      'gaining focus with initialSuggestions set shows them immediately with no HTTP call',
+      (tester) async {
+    var requestMade = false;
+    final client = MockClient((request) async {
+      requestMade = true;
+      return http.Response('[]', 200);
+    });
+    const cessna = Aircraft(id: 'aircraft-1', registration: 'G-ABCD', make: 'Cessna', model: '152');
+
+    await pumpPicker(tester,
+        client: client, onChanged: (_) {}, initialSuggestions: [cessna]);
+    await tester.tap(find.byType(TextField));
+    await tester.pump();
+
+    expect(find.text('G-ABCD - Cessna 152'), findsOneWidget);
+    expect(requestMade, isFalse);
+  });
+
+  testWidgets(
+      'clearing a selection still hits the network even with initialSuggestions set',
+      (tester) async {
+    var requestMade = false;
+    const cessna = Aircraft(id: 'aircraft-1', registration: 'G-ABCD', make: 'Cessna', model: '152');
+    final client = MockClient((request) async {
+      requestMade = true;
+      return http.Response(
+          '[{"id":"aircraft-1","registration":"G-ABCD","make":"Cessna","model":"152"}]', 200);
+    });
+
+    await pumpPicker(tester,
+        client: client,
+        onChanged: (_) {},
+        initialValue: cessna,
+        initialSuggestions: [cessna]);
+    await tester.tap(find.byIcon(Icons.cancel));
+    await tester.pump();
+
+    expect(requestMade, isTrue);
   });
 
   testWidgets('editing the text after a selection clears it', (tester) async {

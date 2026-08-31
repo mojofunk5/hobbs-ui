@@ -3,10 +3,12 @@ import 'package:http/http.dart' as http;
 
 import '../api/api_exception.dart';
 import '../api/flight_api.dart';
+import '../api/flight_entry_context_api.dart';
 import '../format.dart';
 import '../models/aircraft.dart';
 import '../models/airfield.dart';
 import '../models/flight_entry.dart';
+import '../models/flight_entry_context.dart';
 import '../models/pilot_summary.dart';
 import '../models/session.dart';
 import '../widgets/aircraft_picker.dart';
@@ -25,6 +27,11 @@ import 'view_flight_entry_screen.dart';
 /// aircraftId/pilotInCommandId already work - so this screen just passes the picked [Airfield]'s
 /// id straight through to [FlightApi.createFlightEntry]; a pilot can no longer type an arbitrary
 /// place, only pick one of the seeded airfields.
+///
+/// On [initState], prefetches everything the five pickers need via a single
+/// GET /flight-entry-context call (see docs/plans/flight-entry-context-prefetch.md), passed down
+/// as each picker's `initialSuggestions` so the first on-focus load is synchronous instead of a
+/// per-picker network round trip.
 class CreateFlightEntryScreen extends StatefulWidget {
   const CreateFlightEntryScreen(
       {super.key, required this.session, this.httpClient});
@@ -76,6 +83,24 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
   bool _submitting = false;
   String? _error;
   FlightEntry? _created;
+
+  // Prefetched once via GET /flight-entry-context (see
+  // docs/plans/flight-entry-context-prefetch.md) so the five pickers below can skip their own
+  // on-focus fetch. Fire-and-forget, not awaited by a FutureBuilder gating the form - a pilot who
+  // focuses a picker before this lands just gets that picker's own unchanged on-focus fetch, and a
+  // failed prefetch is swallowed silently since every picker already has that same fallback.
+  FlightEntryContext? _context;
+
+  @override
+  void initState() {
+    super.initState();
+    FlightEntryContextApi.fetch(
+      sessionId: widget.session.sessionId,
+      client: widget.httpClient,
+    ).then((result) {
+      if (mounted) setState(() => _context = result);
+    }).catchError((_) {});
+  }
 
   @override
   void dispose() {
@@ -253,6 +278,7 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
                   label: 'Aircraft',
                   errorText: _aircraftError,
                   httpClient: widget.httpClient,
+                  initialSuggestions: _context?.recentAircraft,
                   onChanged: (aircraft) => setState(() {
                     _aircraft = aircraft;
                     if (aircraft != null) _aircraftError = null;
@@ -272,6 +298,7 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
                   label: 'Departure place',
                   errorText: _departureAirfieldError,
                   httpClient: widget.httpClient,
+                  initialSuggestions: _context?.recentAirfields,
                   onChanged: (airfield) => setState(() {
                     _departureAirfield = airfield;
                     if (airfield != null) _departureAirfieldError = null;
@@ -291,6 +318,7 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
                   label: 'Arrival place',
                   errorText: _arrivalAirfieldError,
                   httpClient: widget.httpClient,
+                  initialSuggestions: _context?.recentAirfields,
                   onChanged: (airfield) => setState(() {
                     _arrivalAirfield = airfield;
                     if (airfield != null) _arrivalAirfieldError = null;
@@ -310,6 +338,7 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
                   initialValue: _pilotInCommand,
                   errorText: _pilotInCommandError,
                   httpClient: widget.httpClient,
+                  initialSuggestions: _context?.knownPilots,
                   onChanged: (pilot) => setState(() {
                     _pilotInCommand = pilot;
                     if (pilot != null) _pilotInCommandError = null;
@@ -321,6 +350,7 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
                   sessionId: widget.session.sessionId,
                   label: 'Co-pilot (optional)',
                   httpClient: widget.httpClient,
+                  initialSuggestions: _context?.knownPilots,
                   onChanged: (pilot) => setState(() => _coPilot = pilot),
                 ),
                 const SizedBox(height: 12),
