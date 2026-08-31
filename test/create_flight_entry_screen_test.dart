@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -77,6 +79,15 @@ void main() {
     await tester.pump();
   }
 
+  Future<void> pickCapacity(WidgetTester tester, String label) async {
+    await tester.ensureVisible(
+        find.byKey(const Key('holderOperatingCapacityField')));
+    await tester.tap(find.byKey(const Key('holderOperatingCapacityField')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(label).last);
+    await tester.pumpAndSettle();
+  }
+
   Future<void> fillRequiredFields(WidgetTester tester) async {
     await pickAircraft(tester);
     await pickAirfield(tester, const Key('departureAirfieldPicker'),
@@ -84,6 +95,7 @@ void main() {
     await pickAirfield(
         tester, const Key('arrivalAirfieldPicker'), 'EGCC - Manchester Airport');
     // Pilot in command defaults to the caller (William) - already set, nothing to fill in here.
+    await pickCapacity(tester, 'Pilot Under Training');
     await tester.enterText(find.byType(TextFormField).first, '45');
   }
 
@@ -122,6 +134,7 @@ void main() {
 
   testWidgets('submitting the form saves the entry and shows its id',
       (tester) async {
+    String? sentHolderOperatingCapacity;
     final client = MockClient((request) async {
       if (request.url.path.endsWith('/flight-entry-context')) {
         return http.Response('', 500);
@@ -146,6 +159,9 @@ void main() {
             '"latitude":53.35,"longitude":-2.27,"elevationFt":257,"type":"large_airport"}]',
             200);
       }
+      sentHolderOperatingCapacity =
+          (jsonDecode(request.body) as Map<String, dynamic>)
+              ['holderOperatingCapacity'] as String?;
       return http.Response(
           '{'
           '"id":"entry-1",'
@@ -158,6 +174,8 @@ void main() {
           '"arrivalAirfieldId":"airfield-2",'
           '"pilotInCommandId":"pilot-2",'
           '"coPilotId":null,'
+          '"holderOperatingCapacity":"PILOT_UNDER_TRAINING",'
+          '"holderOperatingCapacityNotation":"P.u/t",'
           '"singleEngineMinutes":0,'
           '"multiEngineMinutes":0,'
           '"totalMinutes":45,'
@@ -183,6 +201,7 @@ void main() {
 
     expect(find.text('Flight entry saved.'), findsOneWidget);
     expect(find.text('Entry id: entry-1'), findsOneWidget);
+    expect(sentHolderOperatingCapacity, 'PILOT_UNDER_TRAINING');
   });
 
   testWidgets(

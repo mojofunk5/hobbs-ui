@@ -13,6 +13,7 @@ import '../models/pilot_summary.dart';
 import '../models/session.dart';
 import '../widgets/aircraft_picker.dart';
 import '../widgets/airfield_picker.dart';
+import '../widgets/holder_operating_capacity_field.dart';
 import '../widgets/pilot_picker.dart';
 import '../widgets/responsive_page.dart';
 import 'view_flight_entry_screen.dart';
@@ -22,6 +23,8 @@ import 'view_flight_entry_screen.dart';
 /// (see docs/plans/pilot-picker.md); aircraft is picked via [AircraftPicker] against
 /// GET /aircraft?search= (see docs/plans/aircraft-picker.md); departure/arrival places are picked
 /// via [AirfieldPicker] against GET /airfield?search= (see docs/plans/airfield-picker.md, chunk 6).
+/// Holder's Operating Capacity is picked via [HolderOperatingCapacityField], a fixed-choice
+/// dropdown rather than a search picker - see docs/plans/holder-operating-capacity.md.
 /// The legacy free-text departurePlace/arrivalPlace fields have been dropped from the backend
 /// contract entirely - departureAirfieldId/arrivalAirfieldId are now required, mirroring how
 /// aircraftId/pilotInCommandId already work - so this screen just passes the picked [Airfield]'s
@@ -79,6 +82,8 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
   String? _departureAirfieldError;
   Airfield? _arrivalAirfield;
   String? _arrivalAirfieldError;
+  String? _holderOperatingCapacity;
+  String? _holderOperatingCapacityError;
 
   bool _submitting = false;
   String? _error;
@@ -191,17 +196,21 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
     final aircraftMissing = _aircraft == null;
     final departureAirfieldMissing = _departureAirfield == null;
     final arrivalAirfieldMissing = _arrivalAirfield == null;
+    final holderOperatingCapacityMissing = _holderOperatingCapacity == null;
     setState(() {
       _pilotInCommandError = picMissing ? 'Required' : null;
       _aircraftError = aircraftMissing ? 'Required' : null;
       _departureAirfieldError = departureAirfieldMissing ? 'Required' : null;
       _arrivalAirfieldError = arrivalAirfieldMissing ? 'Required' : null;
+      _holderOperatingCapacityError =
+          holderOperatingCapacityMissing ? 'Required' : null;
     });
     if (!formValid ||
         picMissing ||
         aircraftMissing ||
         departureAirfieldMissing ||
-        arrivalAirfieldMissing) {
+        arrivalAirfieldMissing ||
+        holderOperatingCapacityMissing) {
       return;
     }
     setState(() {
@@ -219,6 +228,7 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
         arrivalAirfieldId: _arrivalAirfield!.id,
         pilotInCommandId: _pilotInCommand!.id,
         coPilotId: _coPilot?.id,
+        holderOperatingCapacity: _holderOperatingCapacity!,
         singleEngineMinutes: _intOr0(_singleEngineMinutesController),
         multiEngineMinutes: _intOr0(_multiEngineMinutesController),
         totalMinutes: _intOr0(_totalMinutesController),
@@ -352,6 +362,17 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
                   httpClient: widget.httpClient,
                   initialSuggestions: _context?.knownPilots,
                   onChanged: (pilot) => setState(() => _coPilot = pilot),
+                ),
+                const SizedBox(height: 12),
+                HolderOperatingCapacityField(
+                  key: const Key('holderOperatingCapacityField'),
+                  label: 'Capacity',
+                  value: _holderOperatingCapacity,
+                  errorText: _holderOperatingCapacityError,
+                  onChanged: (capacity) => setState(() {
+                    _holderOperatingCapacity = capacity;
+                    if (capacity != null) _holderOperatingCapacityError = null;
+                  }),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(

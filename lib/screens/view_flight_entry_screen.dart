@@ -156,6 +156,7 @@ class _ViewFlightEntryScreenState extends State<ViewFlightEntryScreen> {
                     _row('Pilot in command', entry.pilotInCommandId),
                     if (entry.coPilotId != null)
                       _row('Co-pilot', entry.coPilotId!),
+                    _row('Capacity', entry.holderOperatingCapacityNotation),
                     const Divider(height: 24),
                     _row('Total', formatMinutes(entry.totalMinutes)),
                     _row('Single-engine',

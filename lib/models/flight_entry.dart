@@ -12,6 +12,13 @@ class FlightEntry {
   final String arrivalAirfieldId;
   final String pilotInCommandId;
   final String? coPilotId;
+
+  /// The raw enum value (e.g. "PILOT_UNDER_TRAINING") - see HolderOperatingCapacityField for the
+  /// picker that produces this on create. [holderOperatingCapacityNotation] is the CAA shorthand
+  /// (e.g. "P.u/t") derived server-side from this same value - never re-derive it client-side, per
+  /// hobbs's docs/plans/holder-operating-capacity.md.
+  final String holderOperatingCapacity;
+  final String holderOperatingCapacityNotation;
   final int singleEngineMinutes;
   final int multiEngineMinutes;
   final int totalMinutes;
@@ -37,6 +44,8 @@ class FlightEntry {
     required this.arrivalAirfieldId,
     required this.pilotInCommandId,
     this.coPilotId,
+    required this.holderOperatingCapacity,
+    required this.holderOperatingCapacityNotation,
     required this.singleEngineMinutes,
     required this.multiEngineMinutes,
     required this.totalMinutes,
@@ -63,6 +72,9 @@ class FlightEntry {
         arrivalAirfieldId: json['arrivalAirfieldId'] as String,
         pilotInCommandId: json['pilotInCommandId'] as String,
         coPilotId: json['coPilotId'] as String?,
+        holderOperatingCapacity: json['holderOperatingCapacity'] as String,
+        holderOperatingCapacityNotation:
+            json['holderOperatingCapacityNotation'] as String,
         singleEngineMinutes: json['singleEngineMinutes'] as int,
         multiEngineMinutes: json['multiEngineMinutes'] as int,
         totalMinutes: json['totalMinutes'] as int,
