@@ -26,6 +26,8 @@ void main() {
       '"arrivalTime":"${date}T10:45:00Z",'
       '"pilotInCommandId":"pilot-2",'
       '"coPilotId":null,'
+      '"holderOperatingCapacity":"PILOT_IN_COMMAND",'
+      '"holderOperatingCapacityNotation":"P1",'
       '"singleEngineMinutes":45,'
       '"multiEngineMinutes":0,'
       '"totalMinutes":45,'

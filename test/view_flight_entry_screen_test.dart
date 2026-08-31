@@ -25,6 +25,8 @@ void main() {
       '"arrivalTime":"2026-08-24T10:45:00Z",'
       '"pilotInCommandId":"pilot-2",'
       '"coPilotId":null,'
+      '"holderOperatingCapacity":"PILOT_UNDER_TRAINING",'
+      '"holderOperatingCapacityNotation":"P.u/t",'
       '"singleEngineMinutes":45,'
       '"multiEngineMinutes":0,'
       '"totalMinutes":45,'
@@ -77,6 +79,7 @@ void main() {
     expect(find.text('EGCM 10:00'), findsOneWidget);
     expect(find.text('EGCC 10:45'), findsOneWidget);
     expect(find.text('pilot-2'), findsOneWidget);
+    expect(find.text('P.u/t'), findsOneWidget);
     expect(find.text('Circuits'), findsOneWidget);
   });
 
