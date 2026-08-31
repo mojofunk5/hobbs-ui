@@ -1,6 +1,7 @@
 # Plan: Split up `CreateFlightEntryScreen`
 
-**Status:** Designed 2026-08-30, not yet implemented.
+**Status:** Designed 2026-08-30, implemented 2026-08-30 -
+[hobbs-ui#23](https://github.com/mojofunk5/hobbs-ui/pull/23).
 
 ## Context
 

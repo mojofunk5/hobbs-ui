@@ -1,6 +1,7 @@
 # Plan: consume `GET /flight-entry-context` in the create-flight-entry screen
 
-**Status:** Designed 2026-08-31, not yet implemented.
+**Status:** Designed 2026-08-31, implemented 2026-08-31 -
+[hobbs-ui#36](https://github.com/mojofunk5/hobbs-ui/pull/36).
 
 ## Context
 

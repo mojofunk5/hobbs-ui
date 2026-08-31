@@ -120,6 +120,12 @@ a reload. Would need real named routes to fix properly - not worth it for one sc
 Reverse-chronological. Never delete an entry - a later decision that supersedes an earlier one says
 so explicitly.
 
+### Note (2026-08-31): the prefetch decision below is now implemented
+The design described in the entry directly below shipped as
+[hobbs-ui#36](https://github.com/mojofunk5/hobbs-ui/pull/36) the same day - `docs/plans/flight-entry-context-prefetch.md`'s
+Status line is updated accordingly. Recorded as a fresh note rather than editing that entry's "not
+yet implemented" text, per this section's own append-only convention.
+
 ### Decision (2026-08-31): consume `GET /flight-entry-context` as a prefetch, not a blocking load
 `hobbs` added `GET /flight-entry-context` ([mojofunk5/hobbs#53](https://github.com/mojofunk5/hobbs/pull/53),
 plan in `hobbs`'s `docs/plans/new-entry-context-endpoint.md`) - one call aggregating what
@@ -265,13 +271,32 @@ can't each run their own Caddy container bound to host ports 80/443. See that re
 
 ## 10. Open work / roadmap
 
+See [`hobbs`'s `docs/ROADMAP.md`](https://github.com/mojofunk5/hobbs/blob/master/docs/ROADMAP.md)
+for the full, sequenced, cross-repo picture (shipped / in flight / backlog) - this section is the
+short version scoped to this repo. Keep the two in sync.
+
 In rough priority order:
 
-1. **Editing/deleting a flight entry.** Only create/view/list exist - no way to fix a mistyped
+1. **Keep READMEs and architecture docs current, both repos.** *(added 2026-08-31)* A 2026-08-31
+   sweep of `hobbs` found six stale plan-doc `Status:` lines and a fully-obsolete `CLAUDE.md` bullet;
+   this repo had two stale `Status:` lines of its own (`flight-entry-context-prefetch.md`,
+   `split-create-flight-entry-screen.md` - both actually implemented, now fixed). "Update docs in the
+   same PR as the change" doesn't self-enforce - treat this as a standing item, not a one-off.
+2. **Editing/deleting a flight entry.** Only create/view/list exist - no way to fix a mistyped
    entry or remove one yet.
-2. **Photo-to-logbook OCR.** Take a picture of a paper logbook page, extract entries from it.
-3. **The iOS app.** This repo is web-only today; iOS (and eventually Android) come from the same
+3. **Photo-to-logbook OCR.** *(expanded 2026-08-31)* Take a photo of a paper logbook page and create
+   one or more draft `FlightEntry` rows from it, reviewed/corrected before saving - never
+   auto-committed, same precedent as a `FlightTrack`-derived draft entry. Concretely motivated by a
+   real, entirely handwritten Pooleys logbook; see `hobbs`'s
+   [`docs/reference/pooleys-logbook-notation.jpg`](https://github.com/mojofunk5/hobbs/blob/master/docs/reference/pooleys-logbook-notation.jpg)
+   for the exact CAP804 column layout an OCR pass needs to parse, and `hobbs`'s
+   [`docs/ROADMAP.md`](https://github.com/mojofunk5/hobbs/blob/master/docs/ROADMAP.md) for the
+   full per-column mapping onto the domain. Depends on `hobbs`'s
+   [`docs/plans/holder-operating-capacity.md`](https://github.com/mojofunk5/hobbs/blob/master/docs/plans/holder-operating-capacity.md)
+   for a complete field mapping (the Holder's Operating Capacity column has nowhere to land until
+   that ships) - could start before it lands but would need a follow-up pass for that one column.
+4. **The iOS app.** This repo is web-only today; iOS (and eventually Android) come from the same
    Flutter codebase.
-4. **GPS-recording-to-logbook.** Start a recording, derive a draft `FlightEntry` from the track on
+5. **GPS-recording-to-logbook.** Start a recording, derive a draft `FlightEntry` from the track on
    completion - the MVP-completing feature. Depends on the iOS app existing first (background
    location needs a real mobile platform, not a web tab).
