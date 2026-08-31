@@ -7,9 +7,9 @@ in shape; content is this project's own.
 
 A Flutter client for `hobbs`, a self-hosted PPL flight logbook backend. Today: authentication
 (register, login, password reset) plus the create/view/list logbook-entry screens
-(`docs/plans/logbook-entries.md` in `hobbs`) - pilot in command/co-pilot are picked via a typeahead
-against `GET /pilot?search=` (`docs/plans/pilot-picker.md` in `hobbs`), and aircraft is picked via a
-typeahead against `GET /aircraft?search=` (`docs/plans/aircraft-picker.md` in `hobbs`) - plus a
+(`docs/plans/done/logbook-entries.md` in `hobbs`) - pilot in command/co-pilot are picked via a typeahead
+against `GET /pilot?search=` (`docs/plans/done/pilot-picker.md` in `hobbs`), and aircraft is picked via a
+typeahead against `GET /aircraft?search=` (`docs/plans/done/aircraft-picker.md` in `hobbs`) - plus a
 Browse Aircraft screen for searching the same reference data outside the flight-entry form.
 
 ## 2. Goals
@@ -122,20 +122,20 @@ so explicitly.
 
 ### Note (2026-08-31): the prefetch decision below is now implemented
 The design described in the entry directly below shipped as
-[hobbs-ui#36](https://github.com/mojofunk5/hobbs-ui/pull/36) the same day - `docs/plans/flight-entry-context-prefetch.md`'s
+[hobbs-ui#36](https://github.com/mojofunk5/hobbs-ui/pull/36) the same day - `docs/plans/done/flight-entry-context-prefetch.md`'s
 Status line is updated accordingly. Recorded as a fresh note rather than editing that entry's "not
 yet implemented" text, per this section's own append-only convention.
 
 ### Decision (2026-08-31): consume `GET /flight-entry-context` as a prefetch, not a blocking load
 `hobbs` added `GET /flight-entry-context` ([mojofunk5/hobbs#53](https://github.com/mojofunk5/hobbs/pull/53),
-plan in `hobbs`'s `docs/plans/new-entry-context-endpoint.md`) - one call aggregating what
+plan in `hobbs`'s `docs/plans/done/new-entry-context-endpoint.md`) - one call aggregating what
 `GET /airfield/recent`/`GET /aircraft/recent`/`GET /pilot?search=` (no query) each return, sized for
 `CreateFlightEntryScreen` specifically because its four required pickers are essentially certain to
 all get focused. Full design for the UI side (new `FlightEntryContext` model/API wrapper, an
 `initialSuggestions` parameter added to `AirfieldPicker`/`AircraftPicker`/`PilotPicker` so the very
 first on-focus load per picker consumes the prefetched batch instead of hitting the network, `_clear()`
 unchanged so a re-focus after clearing still goes back to the network) is in
-`docs/plans/flight-entry-context-prefetch.md` - not yet implemented. Deliberately a non-blocking
+`docs/plans/done/flight-entry-context-prefetch.md` - not yet implemented. Deliberately a non-blocking
 fire-and-forget fetch in `initState` rather than gating the form behind a `FutureBuilder`: a pilot who
 focuses a field before the prefetch lands just falls back to that picker's existing individual
 on-focus fetch, which is exactly today's behaviour, not a regression - see the plan's "Explicitly out
@@ -150,7 +150,7 @@ itself: `AirfieldPicker` was fetching the *entire* ~1,200-row GB airfield table 
 to show the calling pilot's own last 5 flown airfields at the top
 (`Logbook.searchAirfields`'s recent-first splice, in `hobbs`). Rather than patch that path, `hobbs`
 gains two new endpoints - `GET /airfield/recent` and `GET /aircraft/recent`, each capped at 5,
-plan in `hobbs`'s `docs/plans/picker-recent-endpoints.md` - and the picker switches to calling the
+plan in `hobbs`'s `docs/plans/done/picker-recent-endpoints.md` - and the picker switches to calling the
 right-sized one instead. Aircraft gains an on-focus recent-items dropdown it never had before as
 part of the same change (previously it had no browse-before-typing affordance at all, unlike
 Pilot/Airfield) - a deliberate, small scope addition alongside the fix, not scope creep: leaving
