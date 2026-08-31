@@ -120,6 +120,23 @@ a reload. Would need real named routes to fix properly - not worth it for one sc
 Reverse-chronological. Never delete an entry - a later decision that supersedes an earlier one says
 so explicitly.
 
+### Decision (2026-08-31): consume `GET /flight-entry-context` as a prefetch, not a blocking load
+`hobbs` added `GET /flight-entry-context` ([mojofunk5/hobbs#53](https://github.com/mojofunk5/hobbs/pull/53),
+plan in `hobbs`'s `docs/plans/new-entry-context-endpoint.md`) - one call aggregating what
+`GET /airfield/recent`/`GET /aircraft/recent`/`GET /pilot?search=` (no query) each return, sized for
+`CreateFlightEntryScreen` specifically because its four required pickers are essentially certain to
+all get focused. Full design for the UI side (new `FlightEntryContext` model/API wrapper, an
+`initialSuggestions` parameter added to `AirfieldPicker`/`AircraftPicker`/`PilotPicker` so the very
+first on-focus load per picker consumes the prefetched batch instead of hitting the network, `_clear()`
+unchanged so a re-focus after clearing still goes back to the network) is in
+`docs/plans/flight-entry-context-prefetch.md` - not yet implemented. Deliberately a non-blocking
+fire-and-forget fetch in `initState` rather than gating the form behind a `FutureBuilder`: a pilot who
+focuses a field before the prefetch lands just falls back to that picker's existing individual
+on-focus fetch, which is exactly today's behaviour, not a regression - see the plan's "Explicitly out
+of scope" for the full reasoning. Wires directly into the three hand-rolled pickers rather than into
+`docs/plans/typeahead-picker.md`'s still-unimplemented `TypeaheadPicker<T>` extraction, same
+precedent as the 2026-08-31 on-focus-loading revision below.
+
 ### Decision (2026-08-31): stop loading the full airfield table on focus; add a recent-aircraft browse too
 Investigating a reported bug (departure/arrival airfield picker showing "No airfields found"
 immediately on focus, before typing) surfaced that the fix belonged one level up from the bug
