@@ -19,9 +19,16 @@ void main() {
   // and (on focus) GET /aircraft/recent, and the two AirfieldPicker fields issue GET
   // /airfield?search= and (on focus) GET /airfield/recent - route all of these to canned results
   // so they don't interfere with assertions about the FlightApi.createFlightEntry request itself.
+  // GET /flight-entry-context (the initState prefetch - see
+  // docs/plans/flight-entry-context-prefetch.md) fails here, so each picker falls back to its own
+  // on-focus fetch above, exercising the same fallback path these tests were written against
+  // rather than needing every fixture updated for the prefetch.
   http.Client wrapClient(
       Future<http.Response> Function(http.Request) onCreateFlightEntry) {
     return MockClient((request) async {
+      if (request.url.path.endsWith('/flight-entry-context')) {
+        return http.Response('', 500);
+      }
       if (request.url.path.endsWith('/pilot')) {
         return http.Response('[]', 200);
       }
@@ -116,6 +123,9 @@ void main() {
   testWidgets('submitting the form saves the entry and shows its id',
       (tester) async {
     final client = MockClient((request) async {
+      if (request.url.path.endsWith('/flight-entry-context')) {
+        return http.Response('', 500);
+      }
       if (request.url.path.endsWith('/pilot')) {
         return http.Response('[]', 200);
       }
@@ -173,6 +183,86 @@ void main() {
 
     expect(find.text('Flight entry saved.'), findsOneWidget);
     expect(find.text('Entry id: entry-1'), findsOneWidget);
+  });
+
+  testWidgets(
+      'issues exactly one GET /flight-entry-context call and feeds pickers from it',
+      (tester) async {
+    var contextRequests = 0;
+    final client = MockClient((request) async {
+      if (request.url.path.endsWith('/flight-entry-context')) {
+        contextRequests++;
+        return http.Response(
+            '{'
+            '"recentAirfields":[{"id":"airfield-1","icaoCode":"EGCM",'
+            '"name":"Manchester Barton Aerodrome","municipality":"Manchester",'
+            '"isoCountry":"GB","isoRegion":"GB-ENG","latitude":53.47,"longitude":-2.38,'
+            '"elevationFt":80,"type":"small_airport"}],'
+            '"recentAircraft":[{"id":"aircraft-1","registration":"G-ABCD","make":"Cessna",'
+            '"model":"152"}],'
+            '"knownPilots":[{"id":"pilot-2","name":"Louis"}]'
+            '}',
+            200);
+      }
+      // Any picker still hitting its own endpoint here would mean the prefetch wasn't consumed.
+      fail('unexpected request to ${request.url}');
+    });
+
+    await pumpScreen(tester, client: client);
+    await tester.pump();
+
+    await tester.tap(find.descendant(
+        of: find.byKey(const Key('aircraftPicker')), matching: find.byType(TextField)));
+    await tester.pump();
+    expect(find.text('G-ABCD - Cessna 152'), findsOneWidget);
+
+    await tester.tap(find.descendant(
+        of: find.byKey(const Key('departureAirfieldPicker')), matching: find.byType(TextField)));
+    await tester.pump();
+    expect(find.text('EGCM - Manchester Barton Aerodrome'), findsOneWidget);
+
+    final coPilotField = find.descendant(
+        of: find.byKey(const Key('coPilotPicker')), matching: find.byType(TextField));
+    await tester.ensureVisible(coPilotField);
+    await tester.tap(coPilotField);
+    await tester.pump();
+    expect(find.text('Louis'), findsOneWidget);
+
+    expect(contextRequests, 1);
+  });
+
+  testWidgets(
+      'a failed prefetch still renders a usable form via each pickers own fallback',
+      (tester) async {
+    final client = MockClient((request) async {
+      if (request.url.path.endsWith('/flight-entry-context')) {
+        return http.Response('', 500);
+      }
+      if (request.url.path.endsWith('/pilot')) {
+        return http.Response('[]', 200);
+      }
+      if (request.url.path.endsWith('/aircraft') ||
+          request.url.path.endsWith('/aircraft/recent')) {
+        return http.Response(
+            '[{"id":"aircraft-1","registration":"G-ABCD","make":"Cessna","model":"152"}]',
+            200);
+      }
+      if (request.url.path.endsWith('/airfield') ||
+          request.url.path.endsWith('/airfield/recent')) {
+        return http.Response('[]', 200);
+      }
+      return http.Response('', 200);
+    });
+
+    await pumpScreen(tester, client: client);
+    await tester.pump();
+
+    await tester.tap(find.descendant(
+        of: find.byKey(const Key('aircraftPicker')), matching: find.byType(TextField)));
+    await tester.pump();
+
+    // Falls back to AircraftPicker's own GET /aircraft/recent, unchanged.
+    expect(find.text('G-ABCD - Cessna 152'), findsOneWidget);
   });
 
   testWidgets('shows an error on a 400 response', (tester) async {

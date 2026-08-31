@@ -32,6 +32,7 @@ class AirfieldPicker extends StatefulWidget {
     required this.label,
     required this.onChanged,
     this.initialValue,
+    this.initialSuggestions,
     this.errorText,
     this.httpClient,
   });
@@ -41,6 +42,12 @@ class AirfieldPicker extends StatefulWidget {
   final ValueChanged<Airfield?> onChanged;
   final Airfield? initialValue;
   final String? errorText;
+
+  /// A prefetched suggestion set (e.g. from GET /flight-entry-context) consumed on the very first
+  /// on-focus load instead of this widget making its own GET /airfield/recent call - see
+  /// docs/plans/flight-entry-context-prefetch.md. Null means "no prefetch available", falling back
+  /// to today's own-fetch behaviour unchanged.
+  final List<Airfield>? initialSuggestions;
 
   /// Overridable for tests - see test/airfield_picker_test.dart.
   final http.Client? httpClient;
@@ -87,8 +94,17 @@ class _AirfieldPickerState extends State<AirfieldPicker> {
 
   void _onFocusChanged() {
     // Loads a browsable set as soon as the field gains focus, before anything's been typed -
-    // _search('') below hits GET /airfield/recent rather than the full reference table.
-    if (_focusNode.hasFocus && !_searched) {
+    // _search('') below hits GET /airfield/recent rather than the full reference table. A
+    // prefetched initialSuggestions (read live off widget, not captured in initState) is consumed
+    // instead when present, avoiding a redundant network call - see
+    // docs/plans/flight-entry-context-prefetch.md.
+    if (!_focusNode.hasFocus || _searched) return;
+    if (widget.initialSuggestions != null) {
+      setState(() {
+        _suggestions = widget.initialSuggestions!;
+        _searched = true;
+      });
+    } else {
       _search(_controller.text.trim());
     }
   }

@@ -14,6 +14,7 @@ void main() {
     required http.Client client,
     required ValueChanged<PilotSummary?> onChanged,
     PilotSummary? initialValue,
+    List<PilotSummary>? initialSuggestions,
   }) async {
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
@@ -22,6 +23,7 @@ void main() {
           label: 'Pilot in command',
           httpClient: client,
           initialValue: initialValue,
+          initialSuggestions: initialSuggestions,
           onChanged: onChanged,
         ),
       ),
@@ -186,6 +188,46 @@ void main() {
     expect(find.widgetWithText(TextField, 'Amy'), findsOneWidget);
     // Regression: _createNew used to leave _searching stuck true, spinning forever.
     expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
+
+  testWidgets(
+      'gaining focus with initialSuggestions set shows them immediately with no HTTP call',
+      (tester) async {
+    var requestMade = false;
+    final client = MockClient((request) async {
+      requestMade = true;
+      return http.Response('[]', 200);
+    });
+    const louis = PilotSummary(id: 'pilot-2', name: 'Louis');
+
+    await pumpPicker(tester,
+        client: client, onChanged: (_) {}, initialSuggestions: [louis]);
+    await tester.tap(find.byType(TextField));
+    await tester.pump();
+
+    expect(find.text('Louis'), findsOneWidget);
+    expect(requestMade, isFalse);
+  });
+
+  testWidgets(
+      'clearing a selection still hits the network even with initialSuggestions set',
+      (tester) async {
+    var requestMade = false;
+    const louis = PilotSummary(id: 'pilot-2', name: 'Louis');
+    final client = MockClient((request) async {
+      requestMade = true;
+      return http.Response('[{"id":"pilot-2","name":"Louis"}]', 200);
+    });
+
+    await pumpPicker(tester,
+        client: client,
+        onChanged: (_) {},
+        initialValue: louis,
+        initialSuggestions: [louis]);
+    await tester.tap(find.byIcon(Icons.cancel));
+    await tester.pump();
+
+    expect(requestMade, isTrue);
   });
 
   testWidgets('starts pre-filled with an initial value', (tester) async {

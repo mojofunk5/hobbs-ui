@@ -23,6 +23,7 @@ class PilotPicker extends StatefulWidget {
     required this.label,
     required this.onChanged,
     this.initialValue,
+    this.initialSuggestions,
     this.errorText,
     this.httpClient,
   });
@@ -32,6 +33,12 @@ class PilotPicker extends StatefulWidget {
   final ValueChanged<PilotSummary?> onChanged;
   final PilotSummary? initialValue;
   final String? errorText;
+
+  /// A prefetched suggestion set (e.g. from GET /flight-entry-context) consumed on the very first
+  /// on-focus load instead of this widget making its own GET /pilot?search= call - see
+  /// docs/plans/flight-entry-context-prefetch.md. Null means "no prefetch available", falling back
+  /// to today's own-fetch behaviour unchanged.
+  final List<PilotSummary>? initialSuggestions;
 
   /// Overridable for tests - see test/pilot_picker_test.dart.
   final http.Client? httpClient;
@@ -79,8 +86,17 @@ class _PilotPickerState extends State<PilotPicker> {
   void _onFocusChanged() {
     // Loads the caller's full known-pilot set as soon as the field gains focus, before they've
     // typed anything - GET /pilot with no search param returns exactly that (bounded, no
-    // pagination needed - see the plan doc), so this gives a browsable initial dropdown.
-    if (_focusNode.hasFocus && !_searched) {
+    // pagination needed - see the plan doc), so this gives a browsable initial dropdown. A
+    // prefetched initialSuggestions (read live off widget, not captured in initState) is consumed
+    // instead when present, avoiding a redundant network call - see
+    // docs/plans/flight-entry-context-prefetch.md.
+    if (!_focusNode.hasFocus || _searched) return;
+    if (widget.initialSuggestions != null) {
+      setState(() {
+        _suggestions = widget.initialSuggestions!;
+        _searched = true;
+      });
+    } else {
       _search(_controller.text.trim());
     }
   }

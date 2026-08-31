@@ -27,6 +27,7 @@ void main() {
     required http.Client client,
     required ValueChanged<Airfield?> onChanged,
     Airfield? initialValue,
+    List<Airfield>? initialSuggestions,
   }) async {
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
@@ -35,6 +36,7 @@ void main() {
           label: 'Departure place',
           httpClient: client,
           initialValue: initialValue,
+          initialSuggestions: initialSuggestions,
           onChanged: onChanged,
         ),
       ),
@@ -236,6 +238,48 @@ void main() {
 
     expect(find.text('No airfields found - check the spelling and try again'),
         findsOneWidget);
+  });
+
+  testWidgets(
+      'gaining focus with initialSuggestions set shows them immediately with no HTTP call',
+      (tester) async {
+    var requestMade = false;
+    final client = MockClient((request) async {
+      requestMade = true;
+      return http.Response('[]', 200);
+    });
+
+    await pumpPicker(tester,
+        client: client, onChanged: (_) {}, initialSuggestions: [sherburn]);
+    await tester.tap(find.byType(TextField));
+    await tester.pump();
+
+    expect(find.text('EGCJ - Sherburn-in-Elmet Airfield'), findsOneWidget);
+    expect(requestMade, isFalse);
+  });
+
+  testWidgets(
+      'clearing a selection still hits the network even with initialSuggestions set',
+      (tester) async {
+    var requestMade = false;
+    final client = MockClient((request) async {
+      requestMade = true;
+      return http.Response(
+          '[{"id":"airfield-1","icaoCode":"EGCJ","name":"Sherburn-in-Elmet Airfield",'
+          '"municipality":"Sherburn-in-Elmet","isoCountry":"GB","isoRegion":"GB-ENG",'
+          '"latitude":53.79,"longitude":-1.23,"elevationFt":20,"type":"small_airport"}]',
+          200);
+    });
+
+    await pumpPicker(tester,
+        client: client,
+        onChanged: (_) {},
+        initialValue: sherburn,
+        initialSuggestions: [sherburn]);
+    await tester.tap(find.byIcon(Icons.cancel));
+    await tester.pump();
+
+    expect(requestMade, isTrue);
   });
 
   testWidgets('editing the text clears a prior selection until a new pick',
