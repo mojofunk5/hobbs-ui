@@ -291,10 +291,9 @@ In rough priority order:
    [`docs/reference/pooleys-logbook-notation.jpg`](https://github.com/mojofunk5/hobbs/blob/master/docs/reference/pooleys-logbook-notation.jpg)
    for the exact CAP804 column layout an OCR pass needs to parse, and `hobbs`'s
    [`docs/ROADMAP.md`](https://github.com/mojofunk5/hobbs/blob/master/docs/ROADMAP.md) for the
-   full per-column mapping onto the domain. Depends on `hobbs`'s
-   [`docs/plans/holder-operating-capacity.md`](https://github.com/mojofunk5/hobbs/blob/master/docs/plans/holder-operating-capacity.md)
-   for a complete field mapping (the Holder's Operating Capacity column has nowhere to land until
-   that ships) - could start before it lands but would need a follow-up pass for that one column.
+   full per-column mapping onto the domain, including Holder's Operating Capacity (`hobbs`'s
+   [`docs/plans/done/holder-operating-capacity.md`](https://github.com/mojofunk5/hobbs/blob/master/docs/plans/done/holder-operating-capacity.md),
+   shipped 2026-08-31), now fully implemented so this item has nothing left it's waiting on.
 4. **The iOS app.** This repo is web-only today; iOS (and eventually Android) come from the same
    Flutter codebase.
 5. **GPS-recording-to-logbook.** Start a recording, derive a draft `FlightEntry` from the track on
