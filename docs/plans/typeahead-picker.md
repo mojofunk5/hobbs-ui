@@ -1,6 +1,12 @@
 # Plan: Extract a shared `TypeaheadPicker<T>`
 
-**Status:** Designed 2026-08-31, not yet implemented. Revised 2026-08-31 to fold in the on-focus
+**Status:** Designed 2026-08-31. The "Revision: on-focus loading" behaviour (AirfieldPicker/
+AircraftPicker's on-focus GET /airfield/recent and GET /aircraft/recent calls) implemented
+2026-08-31, directly in the existing three hand-rolled pickers - the `TypeaheadPicker<T>`
+extraction itself remains not yet implemented, per this doc's own "gets designed as its own doc PR
+... implemented in a new session" note above; a future session extracting it should build the
+`onFocusLoad` API against the already-shipped on-focus behaviour, not the other way round. Revised
+2026-08-31 to fold in the on-focus
 redesign below - see "Revision: on-focus loading" for what changed and why.
 
 ## Context

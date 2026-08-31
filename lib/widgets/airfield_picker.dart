@@ -9,13 +9,19 @@ import '../models/airfield.dart';
 /// A typeahead field for picking an airfield against GET /airfield?search= (see
 /// docs/plans/airfield-picker.md in the hobbs repo) - replaces a raw departure/arrival place text
 /// field. Behaves like [PilotPicker]: search is optional against a small (~1,200-row GB) reference
-/// set, so the field loads the full/ranked set as soon as it gains focus, before anything's been
+/// set, so the field loads a browsable set as soon as it gains focus, before anything's been
 /// typed - unlike [AircraftPicker]'s 2-character minimum, driven by that dataset's much larger
 /// scale. But like [AircraftPicker], there's no "create new" option - airfield is reference data
 /// seeded from OurAirports, not pilot-submitted, so there's nothing to create inline. Results are
 /// shown in the order the backend returns them (the calling pilot's own recently-flown airfields
 /// first, then alphabetical) - this widget does no re-ranking of its own. See PilotPicker's own doc
 /// comment for why this is hand-rolled rather than built on Flutter's Autocomplete widget.
+///
+/// An empty query (on-focus, or the field cleared back to nothing while still focused) hits
+/// GET /airfield/recent instead of GET /airfield?search= with no search - the calling pilot's own
+/// last 5 flown airfields, not the full ~1,200-row GB table (see
+/// docs/plans/picker-recent-endpoints.md in the hobbs repo). A real (non-empty) search still goes
+/// through GET /airfield?search=, unchanged.
 ///
 /// Not itself a FormField - calls [onChanged] with the current selection (null while nothing's
 /// been picked), same contract as PilotPicker/AircraftPicker.
@@ -80,9 +86,8 @@ class _AirfieldPickerState extends State<AirfieldPicker> {
   }
 
   void _onFocusChanged() {
-    // Loads the backend-ranked full airfield set as soon as the field gains focus, before
-    // anything's been typed - GET /airfield with no search param returns exactly that (bounded at
-    // ~1,200 rows, no pagination needed - see the plan doc), giving a browsable initial dropdown.
+    // Loads a browsable set as soon as the field gains focus, before anything's been typed -
+    // _search('') below hits GET /airfield/recent rather than the full reference table.
     if (_focusNode.hasFocus && !_searched) {
       _search(_controller.text.trim());
     }
@@ -105,11 +110,16 @@ class _AirfieldPickerState extends State<AirfieldPicker> {
     final seq = ++_searchSeq;
     setState(() => _searching = true);
     try {
-      final results = await AirfieldApi.search(
-        sessionId: widget.sessionId,
-        query: query.isEmpty ? null : query,
-        client: widget.httpClient,
-      );
+      // An empty query means "browse", not "search" - GET /airfield/recent is right-sized for
+      // that (the calling pilot's own last 5 flown airfields), versus GET /airfield?search= with
+      // no search, which returns the full ~1,200-row GB table.
+      final results = query.isEmpty
+          ? await AirfieldApi.recent(sessionId: widget.sessionId, client: widget.httpClient)
+          : await AirfieldApi.search(
+              sessionId: widget.sessionId,
+              query: query,
+              client: widget.httpClient,
+            );
       if (!mounted || seq != _searchSeq) return;
       setState(() {
         _suggestions = results;
