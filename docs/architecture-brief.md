@@ -120,6 +120,52 @@ a reload. Would need real named routes to fix properly - not worth it for one sc
 Reverse-chronological. Never delete an entry - a later decision that supersedes an earlier one says
 so explicitly.
 
+### Decision (2026-08-31): stop loading the full airfield table on focus; add a recent-aircraft browse too
+Investigating a reported bug (departure/arrival airfield picker showing "No airfields found"
+immediately on focus, before typing) surfaced that the fix belonged one level up from the bug
+itself: `AirfieldPicker` was fetching the *entire* ~1,200-row GB airfield table on every focus, just
+to show the calling pilot's own last 5 flown airfields at the top
+(`Logbook.searchAirfields`'s recent-first splice, in `hobbs`). Rather than patch that path, `hobbs`
+gains two new endpoints - `GET /airfield/recent` and `GET /aircraft/recent`, each capped at 5,
+plan in `hobbs`'s `docs/plans/picker-recent-endpoints.md` - and the picker switches to calling the
+right-sized one instead. Aircraft gains an on-focus recent-items dropdown it never had before as
+part of the same change (previously it had no browse-before-typing affordance at all, unlike
+Pilot/Airfield) - a deliberate, small scope addition alongside the fix, not scope creep: leaving
+Aircraft inconsistent with the other two once the shared `TypeaheadPicker` (see the entry below)
+exists would bake the inconsistency into the abstraction's design permanently.
+
+Pilot is explicitly **not** part of this change - `GET /pilot?search=` with no query already returns
+a small, privacy-scoped set (people the caller has flown with, not a reference table), so loading it
+in full on focus was never the problem being solved here.
+
+This revises, rather than replaces, the "extract a shared typeahead picker widget" decision directly
+below - see `docs/plans/typeahead-picker.md`'s "Revision: on-focus loading" section for the updated
+`TypeaheadPicker` API (`onFocusLoad` replaces the originally-planned `loadOnFocus` bool).
+
+### Decision (2026-08-31): extract a shared typeahead picker widget
+Non-goal #3 says no abstraction the app doesn't need yet - `PilotPicker`/`AirfieldPicker`/
+`AircraftPicker` were each hand-rolled independently on that basis. The 2026-08-30 typeahead-UX
+decision above is the point that stopped being true: fixing one shared UX problem (missing loading/
+finished/no-results/clear feedback) meant editing the same debounce timer, sequence-number race
+guard, and suggestion-list chrome in three near-identical files, and any future picker-wide change
+(a new picker for a new entity, another shared UX fix) will cost the same 3x tax again. That's the
+signal this project's bare-bones stance treats as "needs it now," not "adding it speculatively."
+
+What's actually shared (~150 of ~200 lines per file): the debounce `Timer`, the `_searchSeq`
+out-of-order-response guard, `_selected`/`_suggestions`/`_searching`/`_searched` state, the
+`TextField` + spinner/clear-icon decoration, and the suggestion `Container`/`ListView`. What
+genuinely varies per picker: the search call itself (including `AircraftPicker`'s
+`minSearchLength` gate vs. the other two's load-everything-on-focus), an optional inline "create
+new" flow (`PilotPicker` only), helper/no-matches copy, and the per-item label.
+
+Plan: a generic `TypeaheadPicker<T>` in `lib/widgets/` taking a search callback
+(`Future<List<T>> Function(String? query)`), a label extractor (`String Function(T)`), and optional
+create-callback/helper-text/load-on-focus parameters; `PilotPicker`/`AirfieldPicker`/
+`AircraftPicker` become thin typed wrappers around it. Per rule 11 of `ai-working-agreement.md`,
+this gets designed as its own doc PR (fleshing out the widget's exact API) reviewed and merged
+first, with the extraction itself implemented in a new session against the merged doc rather than
+continuing straight from here.
+
 ### Decision (2026-08-30): typeahead picker UX conventions
 `AircraftPicker`/`PilotPicker`/`AirfieldPicker` all share one hand-rolled typeahead pattern (see
 `PilotPicker`'s own doc comment for why it's hand-rolled rather than built on Flutter's
