@@ -28,11 +28,50 @@ void main() {
     ));
   }
 
-  testWidgets('does not search until at least 2 characters are typed',
+  testWidgets(
+      'gaining focus loads the callers recently-flown aircraft as suggestions',
       (tester) async {
-    var requests = 0;
     final client = MockClient((request) async {
-      requests++;
+      expect(request.url.path, endsWith('/aircraft/recent'));
+      return http.Response(
+          '[{"id":"aircraft-1","registration":"G-ABCD","make":"Cessna","model":"152"}]', 200);
+    });
+
+    await pumpPicker(tester, client: client, onChanged: (_) {});
+    await tester.tap(find.byType(TextField));
+    await tester.pump();
+
+    expect(find.text('G-ABCD - Cessna 152'), findsOneWidget);
+  });
+
+  testWidgets(
+      'clearing back to an empty field while focused reloads recent aircraft',
+      (tester) async {
+    final client = MockClient((request) async {
+      if (request.url.path.endsWith('/aircraft/recent')) {
+        return http.Response(
+            '[{"id":"aircraft-1","registration":"G-ABCD","make":"Cessna","model":"152"}]', 200);
+      }
+      return http.Response('[]', 200);
+    });
+
+    await pumpPicker(tester, client: client, onChanged: (_) {});
+    await tester.enterText(find.byType(TextField), 'ab');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.enterText(find.byType(TextField), '');
+    await tester.pump();
+
+    expect(find.text('G-ABCD - Cessna 152'), findsOneWidget);
+  });
+
+  testWidgets(
+      'does not search the typed-registration endpoint until at least 2 characters are typed',
+      (tester) async {
+    var searchRequests = 0;
+    final client = MockClient((request) async {
+      if (request.url.path.endsWith('/aircraft')) {
+        searchRequests++;
+      }
       return http.Response('[]', 200);
     });
 
@@ -40,7 +79,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'g');
     await tester.pump(const Duration(milliseconds: 350));
 
-    expect(requests, 0);
+    expect(searchRequests, 0);
   });
 
   testWidgets('typing 2+ characters debounces and searches registration only',
@@ -57,8 +96,9 @@ void main() {
     await pumpPicker(tester, client: client, onChanged: (_) {});
     await tester.enterText(find.byType(TextField), 'ab');
     await tester.pump(const Duration(milliseconds: 100));
-    // Not yet - still within the debounce window.
-    expect(queries, isEmpty);
+    // Not yet - still within the debounce window (the on-focus recent-items load fires
+    // immediately, but the typed search for "ab" doesn't).
+    expect(queries, isNot(contains('ab')));
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(queries, contains('ab'));
@@ -85,7 +125,11 @@ void main() {
       (tester) async {
     final completers = <String, Completer<http.Response>>{};
     final client = MockClient((request) async {
-      final query = request.url.queryParameters['search']!;
+      final query = request.url.queryParameters['search'];
+      if (query == null) {
+        // The on-focus recent-items load, irrelevant to this race - resolve it immediately.
+        return http.Response('[]', 200);
+      }
       return completers.putIfAbsent(query, Completer<http.Response>.new).future;
     });
 

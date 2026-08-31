@@ -15,22 +15,24 @@ void main() {
   );
 
   // The PilotPicker fields (PIC/co-pilot) issue GET /pilot?search= calls of their own (an initial
-  // one on focus, plus one per debounced keystroke), AircraftPicker issues GET /aircraft?search=,
-  // and the two AirfieldPicker fields issue GET /airfield?search= (also on-focus, like PilotPicker)
-  // - route all three to canned results so they don't interfere with assertions about the
-  // FlightApi.createFlightEntry request itself.
+  // one on focus, plus one per debounced keystroke), AircraftPicker issues GET /aircraft?search=
+  // and (on focus) GET /aircraft/recent, and the two AirfieldPicker fields issue GET
+  // /airfield?search= and (on focus) GET /airfield/recent - route all of these to canned results
+  // so they don't interfere with assertions about the FlightApi.createFlightEntry request itself.
   http.Client wrapClient(
       Future<http.Response> Function(http.Request) onCreateFlightEntry) {
     return MockClient((request) async {
       if (request.url.path.endsWith('/pilot')) {
         return http.Response('[]', 200);
       }
-      if (request.url.path.endsWith('/aircraft')) {
+      if (request.url.path.endsWith('/aircraft') ||
+          request.url.path.endsWith('/aircraft/recent')) {
         return http.Response(
             '[{"id":"aircraft-1","registration":"G-ABCD","make":"Cessna","model":"152"}]',
             200);
       }
-      if (request.url.path.endsWith('/airfield')) {
+      if (request.url.path.endsWith('/airfield') ||
+          request.url.path.endsWith('/airfield/recent')) {
         return http.Response(
             '[{"id":"airfield-1","icaoCode":"EGCM","name":"Manchester Barton Aerodrome",'
             '"municipality":"Manchester","isoCountry":"GB","isoRegion":"GB-ENG",'
@@ -117,12 +119,14 @@ void main() {
       if (request.url.path.endsWith('/pilot')) {
         return http.Response('[]', 200);
       }
-      if (request.url.path.endsWith('/aircraft')) {
+      if (request.url.path.endsWith('/aircraft') ||
+          request.url.path.endsWith('/aircraft/recent')) {
         return http.Response(
             '[{"id":"aircraft-1","registration":"G-ABCD","make":"Cessna","model":"152"}]',
             200);
       }
-      if (request.url.path.endsWith('/airfield')) {
+      if (request.url.path.endsWith('/airfield') ||
+          request.url.path.endsWith('/airfield/recent')) {
         return http.Response(
             '[{"id":"airfield-1","icaoCode":"EGCM","name":"Manchester Barton Aerodrome",'
             '"municipality":"Manchester","isoCountry":"GB","isoRegion":"GB-ENG",'

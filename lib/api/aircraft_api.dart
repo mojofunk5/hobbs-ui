@@ -38,4 +38,24 @@ class AircraftApi {
     }
     throw ApiException(response.statusCode);
   }
+
+  /// Thin wrapper over GET /aircraft/recent - the calling pilot's own last 5 distinct flown
+  /// aircraft, most recently flown first. Gives [AircraftPicker] an on-focus browse affordance
+  /// [search] can't offer, since the backend rejects an empty/missing search there rather than
+  /// defaulting to "everything" (aircraft's ~600k-row scale rules that out).
+  static Future<List<Aircraft>> recent({
+    required String sessionId,
+    http.Client? client,
+  }) async {
+    final response = await (client ?? http.Client()).get(
+      Uri.parse('$apiBase/aircraft/recent'),
+      headers: {'Authorization': 'Bearer $sessionId'},
+    );
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return (jsonDecode(response.body) as List)
+          .map((json) => Aircraft.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+    throw ApiException(response.statusCode);
+  }
 }

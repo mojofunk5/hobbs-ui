@@ -33,4 +33,23 @@ class AirfieldApi {
     }
     throw ApiException(response.statusCode);
   }
+
+  /// Thin wrapper over GET /airfield/recent - the calling pilot's own last 5 distinct flown
+  /// airfields, most recently flown first. Right-sized for [AirfieldPicker]'s on-focus browse,
+  /// versus [search] with no query which returns the full ~1,200-row reference table.
+  static Future<List<Airfield>> recent({
+    required String sessionId,
+    http.Client? client,
+  }) async {
+    final response = await (client ?? http.Client()).get(
+      Uri.parse('$apiBase/airfield/recent'),
+      headers: {'Authorization': 'Bearer $sessionId'},
+    );
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return (jsonDecode(response.body) as List)
+          .map((json) => Airfield.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+    throw ApiException(response.statusCode);
+  }
 }

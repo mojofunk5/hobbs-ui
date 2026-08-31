@@ -42,11 +42,10 @@ void main() {
   }
 
   testWidgets(
-      'gaining focus loads the backend-ranked airfield set as suggestions',
+      'gaining focus loads the callers recently-flown airfields as suggestions',
       (tester) async {
     final client = MockClient((request) async {
-      expect(request.url.path, endsWith('/airfield'));
-      expect(request.url.queryParameters['search'], isNull);
+      expect(request.url.path, endsWith('/airfield/recent'));
       return http.Response(
           '[{"id":"airfield-1","icaoCode":"EGCJ","name":"Sherburn-in-Elmet Airfield",'
           '"municipality":"Sherburn-in-Elmet","isoCountry":"GB","isoRegion":"GB-ENG",'
