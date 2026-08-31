@@ -14,10 +14,10 @@ logbook. Live at [hobbs.bssd.co.uk](https://hobbs.bssd.co.uk).
 - **Log a flight** - the CAP804/FCL.050 entry form (`POST /flight`). Pilot in command/co-pilot are
   picked via a typeahead against `GET /pilot?search=` (PIC defaults to yourself), with an inline
   "create new pilot" fallback - see
-  [hobbs's docs/plans/pilot-picker.md](https://github.com/mojofunk5/hobbs/blob/master/docs/plans/pilot-picker.md).
+  [hobbs's docs/plans/done/pilot-picker.md](https://github.com/mojofunk5/hobbs/blob/master/docs/plans/done/pilot-picker.md).
   Aircraft is picked via a typeahead against `GET /aircraft?search=` - no "create new" fallback,
   since aircraft is reference data seeded from OpenSky, not pilot-submitted - see
-  [hobbs's docs/plans/aircraft-picker.md](https://github.com/mojofunk5/hobbs/blob/master/docs/plans/aircraft-picker.md)
+  [hobbs's docs/plans/done/aircraft-picker.md](https://github.com/mojofunk5/hobbs/blob/master/docs/plans/done/aircraft-picker.md)
 - **Your flights** - lists every entry for the signed-in pilot (`GET /flight`, no pagination yet),
   each row opening the view screen below
 - **View a flight** - looks up one entry by id (`GET /flight/{id}`); reachable directly (paste an
