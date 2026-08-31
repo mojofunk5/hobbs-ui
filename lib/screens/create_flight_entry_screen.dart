@@ -35,6 +35,12 @@ import 'view_flight_entry_screen.dart';
 /// GET /flight-entry-context call (see docs/plans/flight-entry-context-prefetch.md), passed down
 /// as each picker's `initialSuggestions` so the first on-focus load is synchronous instead of a
 /// per-picker network round trip.
+///
+/// Total minutes is derived from the departure/arrival times ([_syncTotalMinutesFromTimes]) rather
+/// than always typed by hand, since this screen already collects both times - it stays editable for
+/// the rare case they genuinely diverge (e.g. logged airborne time vs. block time). Picking equal
+/// departure and arrival times is rejected ([_timesEqualError]) rather than silently accepted as a
+/// zero-length flight.
 class CreateFlightEntryScreen extends StatefulWidget {
   const CreateFlightEntryScreen(
       {super.key, required this.session, this.httpClient});
@@ -68,7 +74,10 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
 
   DateTime _date = DateTime.now();
   TimeOfDay _departureTime = TimeOfDay.now();
-  TimeOfDay _arrivalTime = TimeOfDay.now();
+  // Defaults 45 minutes after departure rather than equal to it - equal times would immediately
+  // trip _timesEqualError below on every fresh form, and a short local flight is a more useful
+  // starting guess than "just landed".
+  late TimeOfDay _arrivalTime = _addMinutes(_departureTime, 45);
 
   // Defaults to the caller themselves - the common solo-flight case - still editable/clearable
   // for a dual/instructed flight. Co-pilot has no such default; most flights don't have one.
@@ -84,6 +93,12 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
   String? _arrivalAirfieldError;
   String? _holderOperatingCapacity;
   String? _holderOperatingCapacityError;
+  String? _timesEqualError;
+
+  // The most recent value _syncTotalMinutesFromTimes wrote into the total-minutes field - lets it
+  // tell "pilot hasn't touched this since" apart from "pilot typed the same number by coincidence",
+  // so a manual edit is never silently clobbered on the next time change.
+  int? _lastAutoTotalMinutes;
 
   bool _submitting = false;
   String? _error;
@@ -105,6 +120,7 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
     ).then((result) {
       if (mounted) setState(() => _context = result);
     }).catchError((_) {});
+    _syncTotalMinutesFromTimes();
   }
 
   @override
@@ -147,11 +163,52 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
       } else {
         _arrivalTime = picked;
       }
+      _timesEqualError =
+          _timesAreEqual ? 'Departure and arrival times cannot be the same' : null;
+      _syncTotalMinutesFromTimes();
     });
   }
 
   DateTime _combine(TimeOfDay time) =>
       DateTime(_date.year, _date.month, _date.day, time.hour, time.minute);
+
+  bool get _timesAreEqual =>
+      _departureTime.hour == _arrivalTime.hour &&
+      _departureTime.minute == _arrivalTime.minute;
+
+  TimeOfDay _addMinutes(TimeOfDay time, int minutes) {
+    final total = time.hour * 60 + time.minute + minutes;
+    return TimeOfDay(hour: (total ~/ 60) % 24, minute: total % 60);
+  }
+
+  /// Elapsed minutes between the two times, on the shared `_date`. A same-date arrival that reads
+  /// earlier on the clock than departure is treated as having landed the next day (the flight
+  /// crossed midnight) - this app only stores one date for both times, so that's the only way to
+  /// represent an overnight flight's duration. Equal times are handled by _timesEqualError instead,
+  /// not folded into this as a 24-hour flight.
+  int _computeTotalMinutes() {
+    final departure = _combine(_departureTime);
+    var arrival = _combine(_arrivalTime);
+    if (arrival.isBefore(departure)) {
+      arrival = arrival.add(const Duration(days: 1));
+    }
+    return arrival.difference(departure).inMinutes;
+  }
+
+  /// Refreshes the total-minutes field from the two times, unless the pilot has typed something
+  /// different from the last value this same method wrote - so a manual correction (e.g. actual
+  /// airborne time vs. block time) sticks instead of being overwritten on the next time change.
+  void _syncTotalMinutesFromTimes() {
+    if (_timesAreEqual) return;
+    final computed = _computeTotalMinutes();
+    final currentText = _totalMinutesController.text.trim();
+    final isUnedited =
+        currentText.isEmpty || int.tryParse(currentText) == _lastAutoTotalMinutes;
+    if (isUnedited) {
+      _totalMinutesController.text = computed.toString();
+      _lastAutoTotalMinutes = computed;
+    }
+  }
 
   int _intOr0(TextEditingController controller) =>
       int.tryParse(controller.text.trim()) ?? 0;
@@ -197,6 +254,7 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
     final departureAirfieldMissing = _departureAirfield == null;
     final arrivalAirfieldMissing = _arrivalAirfield == null;
     final holderOperatingCapacityMissing = _holderOperatingCapacity == null;
+    final timesEqual = _timesAreEqual;
     setState(() {
       _pilotInCommandError = picMissing ? 'Required' : null;
       _aircraftError = aircraftMissing ? 'Required' : null;
@@ -204,13 +262,16 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
       _arrivalAirfieldError = arrivalAirfieldMissing ? 'Required' : null;
       _holderOperatingCapacityError =
           holderOperatingCapacityMissing ? 'Required' : null;
+      _timesEqualError =
+          timesEqual ? 'Departure and arrival times cannot be the same' : null;
     });
     if (!formValid ||
         picMissing ||
         aircraftMissing ||
         departureAirfieldMissing ||
         arrivalAirfieldMissing ||
-        holderOperatingCapacityMissing) {
+        holderOperatingCapacityMissing ||
+        timesEqual) {
       return;
     }
     setState(() {
@@ -340,6 +401,13 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
                   trailing: const Icon(Icons.access_time),
                   onTap: () => _pickTime(false),
                 ),
+                if (_timesEqualError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(_timesEqualError!,
+                        style:
+                            TextStyle(color: Theme.of(context).colorScheme.error)),
+                  ),
                 const SizedBox(height: 12),
                 PilotPicker(
                   key: const Key('pilotInCommandPicker'),
@@ -382,7 +450,7 @@ class _CreateFlightEntryScreenState extends State<CreateFlightEntryScreen> {
                   validator: (v) {
                     final n = int.tryParse((v ?? '').trim());
                     if (n == null) return 'Required';
-                    if (n < 0) return 'Cannot be negative';
+                    if (n <= 0) return 'Must be greater than zero';
                     return null;
                   },
                 ),
