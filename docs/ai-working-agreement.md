@@ -81,3 +81,15 @@ doc, not a continuation of the planning conversation - the doc must carry the fu
 session only has to read it, not have the planning conversation replayed into it. Keeps planning free
 to explore without burning implementation budget, and keeps each implementation session small and
 focused on exactly what the doc says to build.
+
+## 12. Closing Out a Plan Doc Is Part of the PR That Finishes It
+
+When a PR merges the last chunk of a `docs/plans/*.md` doc, that same PR also: updates the doc's
+`Status:` line to say it's implemented with a link to the PR(s) that did it; moves the doc from
+`docs/plans/` into `docs/plans/done/` (`git mv`, to preserve history - see
+`docs/plans/done/README.md` for the convention); fixes every link to it (other plan docs,
+`docs/architecture-brief.md`, `README.md`, and anything in the sibling `hobbs` repo linking to it by
+full GitHub URL); and moves the corresponding line in `hobbs`'s `docs/ROADMAP.md` from "In
+flight"/"Backlog" into "Shipped". Mirrors the identical rule in `hobbs`'s `CLAUDE.md`, added the same
+day after a sweep found several plan docs in both repos claiming "not yet implemented" for work
+that had actually merged.
