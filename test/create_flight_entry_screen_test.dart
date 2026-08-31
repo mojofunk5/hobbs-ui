@@ -296,4 +296,56 @@ void main() {
     expect(find.text('Check the entered fields - one or more is invalid.'),
         findsOneWidget);
   });
+
+  testWidgets('total minutes defaults to 45 - the departure/arrival gap',
+      (tester) async {
+    await pumpScreen(tester, client: wrapClient((_) async => http.Response('', 200)));
+
+    final totalMinutesField =
+        tester.widget<TextFormField>(find.byType(TextFormField).first);
+    expect(totalMinutesField.controller!.text, '45');
+  });
+
+  testWidgets(
+      'blocks submission and warns when departure and arrival times are set equal',
+      (tester) async {
+    var requestMade = false;
+    final client = wrapClient((request) async {
+      requestMade = true;
+      return http.Response('', 200);
+    });
+
+    await pumpScreen(tester, client: client);
+    await fillRequiredFields(tester);
+
+    // Open the arrival time picker and switch to keyboard entry so an exact time can be typed,
+    // then set it equal to the departure time (both default to TimeOfDay.now()'s hour/minute).
+    await tester.ensureVisible(find.textContaining('Arrival time:'));
+    await tester.tap(find.textContaining('Arrival time:'));
+    await tester.pumpAndSettle();
+    final now = TimeOfDay.now();
+    final entryModeButton = find.byWidgetPredicate(
+        (w) => w is IconButton && w.tooltip == 'Switch to text input mode');
+    await tester.tap(entryModeButton);
+    await tester.pumpAndSettle();
+    // The dialog's text-entry mode is 12-hour with a separate AM/PM toggle - hourOfPeriod, not
+    // hour, is what its hour field expects.
+    final hourOfPeriod = now.hourOfPeriod == 0 ? 12 : now.hourOfPeriod;
+    final dialogTextFields =
+        find.descendant(of: find.byType(Dialog), matching: find.byType(TextField));
+    await tester.enterText(dialogTextFields.at(0), hourOfPeriod.toString());
+    await tester.enterText(
+        dialogTextFields.at(1), now.minute.toString().padLeft(2, '0'));
+    await tester.tap(find.text(now.period == DayPeriod.am ? 'AM' : 'PM'));
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.widgetWithText(FilledButton, 'Save entry'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Save entry'));
+    await tester.pump();
+
+    expect(find.text('Departure and arrival times cannot be the same'),
+        findsOneWidget);
+    expect(requestMade, isFalse);
+  });
 }
